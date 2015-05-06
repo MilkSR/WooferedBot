@@ -34,9 +34,9 @@ def keyboard_handler():
                 channel = raw_input("Where do you want to chat?:")
                 # find bot associated to channel
                 try:
-                    bot = next(bot for (bot,tcp) in bots if channel in bot.factory.channels)
+                    bot = next(bot for (bot,tcp) in bots if channel in bot.channels)
                     msg = raw_input("What do you want to say?:")
-                    bot.say(channel, msg)
+                    bot.irc.say(channel, msg)
                 except StopIteration:
                     print 'I don\'t know that channel'
     print 'done'

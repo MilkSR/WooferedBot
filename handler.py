@@ -41,11 +41,9 @@ class WooferBotCommandHandler():
         #    causing the bot to join the user's channel
         # 2) admins can request the bot to join anybodies channel
         #    entering +join <user>
-        if len(parts) == 1:
-            if channel not in config['admin_channels']: return
-            else: joinChannel = user
-        elif len(parts) == 2:
-            if user not in config['admin_channels']: return
+        if len(parts) == 1 and channel in config['admin_channels']:
+            joinChannel = user
+        elif len(parts) == 2 and user in config['admin_channels']:
             joinChannel = parts[1]
         else:
             return # invalid syntax
@@ -53,7 +51,7 @@ class WooferBotCommandHandler():
         if joinChannel in config['channels']:
             bot.say(channel, '{} is already in channel #{}!'.format(config['nickname'], joinChannel))
         else:
-            bot.say(channel, '{} will join #{} shortly'.format(config['nickname'], joinChannel))
+            bot.say(channel, '{} will join #{} shortly.'.format(config['nickname'], joinChannel))
             bot.addChannel(joinChannel)
 
     def executePart(self, bot, user, channel, message):
@@ -200,7 +198,8 @@ class WooferBotCommandHandler():
         ('+dogfacts', 'executeDogFacts', False),
         ('+kadgar', 'executeKadgar', False),
         ('zimbabwe', 'executeZimbabwe', False),
-        ('+about', 'executeAbout', False)
+        ('+about', 'executeAbout', False),
+        ('ping', 'executePing', False)
     ]
 
 
