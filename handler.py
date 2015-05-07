@@ -1,8 +1,15 @@
-import time, json, urllib, random, datetime
+import time
+import re
+import json
+import random
+import datetime
+import urllib
 from collections import deque
 from threading import Semaphore
 from twisted.internet import reactor
 from settings import config
+
+YOUTUBE_LINK = re.compile(r"""\b(?:https?://)?(?:m\.|www\.)?youtu(?:be\.com|\.be)/(?:v/|watch/|.*?(?:embed|watch).*?v=)?([a-zA-Z0-9\-_]+)""")
 
 class WooferBotCommandHandler():
     def __init__(self):
@@ -12,6 +19,7 @@ class WooferBotCommandHandler():
 
     def handleMessage(self, bot, user, channel, message):
         self.updateDogs(bot, channel, message)
+        self.handleYoutube(bot, user, channel, message)
         for (prefix, handler, dispatch) in self.commands:
             if message.lower().startswith(prefix):
                 if dispatch: # handle in separate thread
@@ -33,6 +41,14 @@ class WooferBotCommandHandler():
                     bot.say(channel, dog)
                     config['dogCount'][channel][dog] = 0
 
+    def handleYoutube(self, bot, user, channel, message):
+        if not channel in config['youtubechannels']: return
+        match = YOUTUBE_LINK.search(message)
+        if not match:
+            return
+
+        self.commandQueue.append(('executeYoutube', bot, user, channel, match.group(1)))
+        self.semaphore.release()
 
     def executeJoin(self, bot, user, channel, message):
         parts = message.split(' ')
@@ -63,18 +79,19 @@ class WooferBotCommandHandler():
         if user == channel: # limit to owner of channel
             cmd = message.lower().split(' ')[1]
             lookup = {
+                'youtube': 'youtubechannels',
                 'kadgar': 'kadgarchannels',
                 'speedrun': 'speedrunchannels',
                 'dogfacts': 'dogfactschannels'
             }
             if (cmd not in lookup.keys()):
-                bot.say(channel, 'I don\'t know command \'{}\', choose from {}'.format(cmd, ', '.join(lookup.keys())))
+                bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup.keys())))
             elif channel not in config[lookup[cmd]]:
                 config[lookup[cmd]].append(channel)
                 config.save()
-                bot.say(channel, 'You can now use command \'{}\' in this channel!'.format(cmd))
+                bot.say(channel, 'You can now use functionality of \'{}\' in this channel!'.format(cmd))
             else:
-                bot.say(channel, 'Command \'+{}\' already works in your channel!'.format(cmd))
+                bot.say(channel, '\'{}\' already works in your channel!'.format(cmd))
 
     def executePb(self, bot, user, channel, message):
         if not channel in config['speedrunchannels']: return
@@ -125,6 +142,14 @@ class WooferBotCommandHandler():
                 bot.say(channel, "The world record in {} {} is {} by {}.".format(game, category, timeString, runner))
         except:
             bot.say(channel, 'Error')
+
+    def executeYoutube(self, bot, user, channel, video_id):
+        url = "https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2Cstatistics&id={}&fields=items(id%2Csnippet(title%2CchannelTitle)%2CcontentDetails(duration)%2Cstatistics(viewCount%2ClikeCount%2CdislikeCount))&key={}".format(video_id, config["YTAuthKey"])
+        response = urllib.urlopen(url)
+        data = json.load(response)
+        title = data['items'][0]['snippet']['title']
+        videoPoster = data['items'][0]['snippet']['channelTitle']
+        bot.say(channel,'{} posted : {} by {}'.format(user, title, videoPoster))
 
     def executeDogs(self, bot, user, channel, message):
         bot.say(channel, ' '.join(config['dogs']))
