@@ -14,6 +14,7 @@ class WooferBot(irc.IRCClient):
         self.logger = ConsoleLogger()
         self.nickname = config['nickname']
         self.password = config['password']
+        self.lineRate = 0.67
 
     def connectionMade(self):
         irc.IRCClient.connectionMade(self)

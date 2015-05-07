@@ -135,6 +135,24 @@ class WooferBotCommandHandler():
         else:
             bot.say(channel, 'FrankerZ LilZ RalpherZ ZreknarF ZliL ZrehplaR')
 
+    def executeRwanda(self, bot, user, channel, message):
+        if user == "spookas_":
+            bot.say(channel,'deeBenis')
+        else:
+            bot.say(channel,'FrankerZ LilZ RalpherZ ZreknarF ZliL ZrehplaR')
+
+    def executeDjibouti(self, bot, user, channel, message):
+        if user=="spookas_":
+            bot.say(channel,'deeAyeSir')
+        else:
+            bot.say(channel,'FrankerZ LilZ RalpherZ ZreknarF ZliL ZrehplaR')
+
+    def executeBotswana(self, bot, user, channel, message):
+        if user == "spookas_":
+            bot.say(channel,'deeArma')
+        else:
+            bot.say(channel,'FrankerZ LilZ RalpherZ ZreknarF ZliL ZrehplaR')
+
     def executeDogFacts(self, bot, user, channel, message):
         if not channel in config['dogfactschannels']: return
 
@@ -199,7 +217,10 @@ class WooferBotCommandHandler():
         ('+kadgar', 'executeKadgar', False),
         ('zimbabwe', 'executeZimbabwe', False),
         ('+about', 'executeAbout', False),
-        ('ping', 'executePing', False)
+        ('ping', 'executePing', False),
+        ('djibouti','executeDjibouti',False),
+        ('botswana','executeBotswana',False),
+        ('rwanda','executeRwanda',False)
     ]
 
 
