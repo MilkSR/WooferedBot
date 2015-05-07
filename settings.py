@@ -18,7 +18,10 @@ class WooferConfig(dict):
         try:
             with open(WooferConfig.cfg_file) as f:
                 self.update(byteify(json.load(f)))
-        except:
+        except Exception as err:
+            # Log the damn error.
+            print "Problem loading config:", repr(err)
+
             # try to save original file under different filename
             import os.path, os, time
             try:

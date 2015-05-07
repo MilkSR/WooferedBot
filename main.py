@@ -1,4 +1,5 @@
-import sys, json
+import sys
+import json
 from time import sleep
 from irc import WooferBotFactory
 from handler import WooferHandler
