@@ -20,8 +20,7 @@ class WooferBotCommandHandler():
         self.commandQueue = deque()
 
     def handleMessage(self, bot, user, channel, message):
-        if channel != "dutchj":
-            self.updateDogs(bot, channel, message)
+        self.updateDogs(bot, channel, message)
         self.handleYoutube(bot, user, channel, message)
         for (prefix, handler, dispatch) in self.commands:
             if message.lower().startswith(prefix):
@@ -37,7 +36,7 @@ class WooferBotCommandHandler():
 
     def updateDogs(self, bot, channel, message):
         for dog in config['dogs']:
-            if dog in message:
+                        print sys.exc_traceback.tb_lineno 
                 config['dogCount'][channel][dog] += 1
                 if config['dogCount'][channel][dog] == 3:
                     # say dog name in channel
@@ -71,7 +70,8 @@ class WooferBotCommandHandler():
             bot.say(channel, '{} is already in channel #{}!'.format(config['nickname'], joinChannel))
         else:
             bot.say(channel, '{} will join #{} shortly.'.format(config['nickname'], joinChannel))
-            bot.addChannel(joinChannel)
+            config.save()
+            bot.factory.addChannel(joinChannel)
 
     def executePart(self, bot, user, channel, message):
         bot.leave(channel, 'requested by {}'.format(user))
@@ -85,7 +85,8 @@ class WooferBotCommandHandler():
                 'youtube': 'youtubechannels',
                 'kadgar': 'kadgarchannels',
                 'speedrun': 'speedrunchannels',
-                'dogfacts': 'dogfactschannels'
+                'dogfacts': 'dogfactschannels',
+                'dogs': 'dogchannels'
             }
             if (cmd not in lookup.keys()):
                 bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup.keys())))
@@ -95,6 +96,25 @@ class WooferBotCommandHandler():
                 bot.say(channel, 'You can now use functionality of \'{}\' in this channel!'.format(cmd))
             else:
                 bot.say(channel, '\'{}\' already works in your channel!'.format(cmd))
+
+    def executeDisable(self, bot, user, channel, message):
+        if user == channel: # limit to owner of channel
+            cmd = message.lower().split(' ')[1]
+            lookup = {
+                'youtube': 'youtubechannels',
+                'kadgar': 'kadgarchannels',
+                'speedrun': 'speedrunchannels',
+                'dogfacts': 'dogfactschannels',
+                'dogs': 'dogchannels'
+            }
+            if (cmd not in lookup.keys()):
+                bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup.keys())))
+            elif channel in config[lookup[cmd]]:
+                config[lookup[cmd]].remove(channel)
+                config.save()
+                bot.say(channel, 'This channel can no longer use the functionality of \'{}\'!'.format(cmd))
+            else:
+                bot.say(channel, '\'{}\' is already off in this channel!'.format(cmd))
 
     def executePb(self, bot, user, channel, message):
         if not channel in config['speedrunchannels']: return
@@ -213,7 +233,7 @@ class WooferBotCommandHandler():
         bot.say(channel,'{} linked : {} by {}'.format(user, title, videoPoster))
 
     def executeDogs(self, bot, user, channel, message):
-        bot.say(channel, ' '.join(config['dogs']))
+            bot.say(channel, ' '.join(config['dogs']))
 
     def executeZimbabwe(self, bot, user, channel, message):
         if user == "spookas_":
@@ -296,6 +316,7 @@ class WooferBotCommandHandler():
         ('+join', 'executeJoin', False),
         ('+part', 'executePart', False),
         ('+add', 'executeAdd', False),
+        ('+disable', 'executeDisable', False),
         ('+pb', 'executePb', True),
         ('+wr', 'executeWr', True),
         ('+splits','executeSplits', True),
