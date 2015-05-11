@@ -33,10 +33,11 @@ class WooferBotCommandHandler():
                         getattr(self, handler)(bot, user, channel, message)
                     except Exception as e:
                         print 'Error while handling command: ' + e.message
+                        print sys.exc_traceback.tb_lineno 
 
     def updateDogs(self, bot, channel, message):
         for dog in config['dogs']:
-                        print sys.exc_traceback.tb_lineno 
+            if dog in message and channel in config['dogchannels']:
                 config['dogCount'][channel][dog] += 1
                 if config['dogCount'][channel][dog] == 3:
                     # say dog name in channel
@@ -70,6 +71,7 @@ class WooferBotCommandHandler():
             bot.say(channel, '{} is already in channel #{}!'.format(config['nickname'], joinChannel))
         else:
             bot.say(channel, '{} will join #{} shortly.'.format(config['nickname'], joinChannel))
+            config['dogchannels'].append(joinChannel)
             config.save()
             bot.factory.addChannel(joinChannel)
 
@@ -233,6 +235,7 @@ class WooferBotCommandHandler():
         bot.say(channel,'{} linked : {} by {}'.format(user, title, videoPoster))
 
     def executeDogs(self, bot, user, channel, message):
+        if channel in config['dogchannels']:
             bot.say(channel, ' '.join(config['dogs']))
 
     def executeZimbabwe(self, bot, user, channel, message):
