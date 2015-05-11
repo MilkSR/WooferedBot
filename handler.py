@@ -4,6 +4,8 @@ import json
 import random
 import datetime
 import urllib
+import sys
+import math
 from collections import deque
 from threading import Semaphore
 from twisted.internet import reactor
@@ -100,13 +102,18 @@ class WooferBotCommandHandler():
             runner = record[1].lower()
             game = record[2].lower()
             category = record[3].lower().title()
-            url = "http://www.speedrun.com/api_records.php?game=" + game + "&amount=1500"
+            url = "http://www.speedrun.com/api_records.php?game=" + game + "&amount=1500&timing=time"
             response = urllib.urlopen(url);
             data = json.load(response)
             pbTime = 0
+            x = [0, 0]
             for key,value in data.values()[0][category].iteritems():
                 if 'player' in value.keys() and value['player'].lower() == runner:
                     pbTime = value['time']
+            if '.' in str(pbTime):
+                x = float(pbTime)
+                x = math.modf(x)
+                pbTime = x[1]
             game = data.keys()[0]
             if int(pbTime) > 3600:
                 timeString = str(datetime.timedelta(seconds=int(pbTime)))
@@ -114,10 +121,15 @@ class WooferBotCommandHandler():
                 timeString = str(int(int(pbTime)/60)).zfill(2)+":"+str(int(pbTime)%60).zfill(2)
             if pbTime == 0:
                 bot.say(channel, "The user does not have a time in this category.")
-            elif pbTime != 0:
-                bot.say(channel, "{}'s personal best in {} {} is {}".format(user.title(), game, category, timeString))
+            elif pbTime != 0 and float(x[0]) == 0:
+                bot.say(channel, "{}'s personal record in {} {} is {}".format(runner.title(), game, category, timeString))
+            elif pbTime != 0 and float(x[0]) != 0:
+                pbDec = str(x[0])
+                bot.say(channel, "{}'s personal record in {} {} is {}{}".format(runner.title(), game, category, timeString, pbDec[1:]))
         except Exception, e:
-            bot.say(channel, "One of the specified variables does not exist. Make sure to use +pb user game category")
+            bot.say(channel, "Error handling request")
+            print e
+            print sys.exc_traceback.tb_lineno 
 
     def executeWr(self, bot, user, channel, message):
         if not channel in config['speedrunchannels']: return
@@ -125,12 +137,18 @@ class WooferBotCommandHandler():
             record = message.split(' ', 2)
             game = record[1].lower()
             category = record[2].lower().title()
-            url = "http://www.speedrun.com/api_records.php?game=" + game
+            url = "http://www.speedrun.com/api_records.php?game=" + game + '&timing=time'
             response = urllib.urlopen(url)
             data = json.load(response)
             value = data.values()[0][category]
             wrTime = value['time']
+            x = [0, 0]
             runner = value['player']
+            game = data.keys()[0]
+            if '.' in str(wrTime):
+                x = float(wrTime)
+                x = math.modf(x)
+                wrTime = x[1]
             game = data.keys()[0]
             if int(wrTime) > 3600:
                 timeString = str(datetime.timedelta(seconds=int(wrTime)))
@@ -138,10 +156,15 @@ class WooferBotCommandHandler():
                 timeString = str(int(int(wrTime)/60)).zfill(2)+":"+str(int(wrTime)%60).zfill(2)
             if wrTime == 0:
                 bot.say(channel, "The specified category doesn't exist")
-            elif wrTime != 0:
-                bot.say(channel, "The world record in {} {} is {} by {}.".format(game, category, timeString, runner))
-        except:
-            bot.say(channel, 'Error')
+            elif wrTime != 0 and float(x[0]) == 0:
+                bot.say(channel, "The world record in {} {} is {} by {}.".format(game, category, timeString, runner.title()))
+            elif wrTime != 0 and float(x[0]) != 0:
+                wrDec = str(x[0])
+                bot.say(channel, "The world record in {} {} is {}{} by {}".format(game, category, timeString, wrDec[1:], runner.title()))
+        except Exception, e:
+            bot.say(channel, "Error handling request")
+            print e
+            print sys.exc_traceback.tb_lineno 
 
     def executeYoutube(self, bot, user, channel, video_id):
         url = "https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2Cstatistics&id={}&fields=items(id%2Csnippet(title%2CchannelTitle)%2CcontentDetails(duration)%2Cstatistics(viewCount%2ClikeCount%2CdislikeCount))&key={}".format(video_id, config["YTAuthKey"])
@@ -149,7 +172,7 @@ class WooferBotCommandHandler():
         data = json.load(response)
         title = data['items'][0]['snippet']['title']
         videoPoster = data['items'][0]['snippet']['channelTitle']
-        bot.say(channel,'{} posted : {} by {}'.format(user, title, videoPoster))
+        bot.say(channel,'{} linked : {} by {}'.format(user, title, videoPoster))
 
     def executeDogs(self, bot, user, channel, message):
         bot.say(channel, ' '.join(config['dogs']))
