@@ -20,7 +20,8 @@ class WooferBotCommandHandler():
         self.commandQueue = deque()
 
     def handleMessage(self, bot, user, channel, message):
-        self.updateDogs(bot, channel, message)
+        if channel != "dutchj":
+            self.updateDogs(bot, channel, message)
         self.handleYoutube(bot, user, channel, message)
         for (prefix, handler, dispatch) in self.commands:
             if message.lower().startswith(prefix):
@@ -101,20 +102,21 @@ class WooferBotCommandHandler():
             record = message.split(' ',3)
             runner = record[1].lower()
             game = record[2].lower()
-            category = record[3].lower().title()
-            url = "http://www.speedrun.com/api_records.php?game=" + game + "&amount=1500&timing=time"
+            category = record[3].lower()
+            url = "http://www.speedrun.com/api_records.php?game=" + game + "&amount=1500"
             response = urllib.urlopen(url);
-            data = json.load(response)
+            data = self.lowerDict(json.load(response))
             pbTime = 0
             x = [0, 0]
             for key,value in data.values()[0][category].iteritems():
                 if 'player' in value.keys() and value['player'].lower() == runner:
-                    pbTime = value['time']
+                    pbTime = value['time'] if 'timeigt' not in value.keys() else value['timeigt']
             if '.' in str(pbTime):
                 x = float(pbTime)
                 x = math.modf(x)
                 pbTime = x[1]
             game = data.keys()[0]
+            print pbTime
             if int(pbTime) > 3600:
                 timeString = str(datetime.timedelta(seconds=int(pbTime)))
             elif int(pbTime) < 3600:
@@ -122,10 +124,10 @@ class WooferBotCommandHandler():
             if pbTime == 0:
                 bot.say(channel, "The user does not have a time in this category.")
             elif pbTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "{}'s personal record in {} {} is {}".format(runner.title(), game, category, timeString))
+                bot.say(channel, "{}'s personal record in {} {} is {}".format(runner.title(), game.title(), category.title(), timeString))
             elif pbTime != 0 and float(x[0]) != 0:
                 pbDec = str(x[0])
-                bot.say(channel, "{}'s personal record in {} {} is {}{}".format(runner.title(), game, category, timeString, pbDec[1:]))
+                bot.say(channel, "{}'s personal record in {} {} is {}{}".format(runner.title(), game.title(), category.title(), timeString, pbDec[1:]))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
@@ -136,12 +138,12 @@ class WooferBotCommandHandler():
         try:
             record = message.split(' ', 2)
             game = record[1].lower()
-            category = record[2].lower().title()
-            url = "http://www.speedrun.com/api_records.php?game=" + game + '&timing=time'
+            category = record[2].lower()
+            url = "http://www.speedrun.com/api_records.php?game=" + game
             response = urllib.urlopen(url)
-            data = json.load(response)
+            data = self.lowerDict(json.load(response))
             value = data.values()[0][category]
-            wrTime = value['time']
+            wrTime = value['time'] if 'timeigt' not in value.keys() else value['timeigt']
             x = [0, 0]
             runner = value['player']
             game = data.keys()[0]
@@ -157,14 +159,50 @@ class WooferBotCommandHandler():
             if wrTime == 0:
                 bot.say(channel, "The specified category doesn't exist")
             elif wrTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "The world record in {} {} is {} by {}.".format(game, category, timeString, runner.title()))
+                bot.say(channel, "The world record in {} {} is {} by {}.".format(game.title(), category.title(), timeString, runner.title()))
             elif wrTime != 0 and float(x[0]) != 0:
                 wrDec = str(x[0])
-                bot.say(channel, "The world record in {} {} is {}{} by {}".format(game, category, timeString, wrDec[1:], runner.title()))
+                bot.say(channel, "The world record in {} {} is {}{} by {}".format(game.title(), category.title(), timeString, wrDec[1:], runner.title()))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
             print sys.exc_traceback.tb_lineno 
+
+    def executeSplits(self, bot, user, channel, message):
+        if not channel in config['speedrunchannels']: return
+        try:
+            record = message.split(' ',3)
+            runner = record[1].lower()
+            game = record[2].lower()
+            category = record[3].lower()
+            url = "http://www.speedrun.com/api_records.php?game=" + game + "&amount=1500"
+            response = urllib.urlopen(url);
+            data = self.lowerDict(json.load(response))
+            splitid = 0
+            x = [0, 0]
+            for key,value in data.values()[0][category].iteritems():
+                if 'player' in value.keys() and value['player'].lower() == runner:
+                    splitid = value['splitsio']
+            game = data.keys()[0]
+            if splitid == 0:
+                bot.say(channel, "The user does splits for this category on speedrun.com.")
+            elif splitid != 0:
+                bot.say(channel, "{}'s splits for {} {} is splits.io/{}".format(runner.title(), game.title(), category.title(), splitid))
+        except Exception, e:
+            bot.say(channel, "Error handling request")
+            print e
+            print sys.exc_traceback.tb_lineno 
+
+    def lowerDict(self,d):
+        e = {}
+        for k, v in d.iteritems():
+            if isinstance(v, dict):
+                e[k.lower()] = self.lowerDict(v)
+            elif isinstance(v, str):
+                e[k.lower()] = v.lower()
+            else:
+                e[k.lower()] = v
+        return e
 
     def executeYoutube(self, bot, user, channel, video_id):
         url = "https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2Cstatistics&id={}&fields=items(id%2Csnippet(title%2CchannelTitle)%2CcontentDetails(duration)%2Cstatistics(viewCount%2ClikeCount%2CdislikeCount))&key={}".format(video_id, config["YTAuthKey"])
@@ -260,6 +298,7 @@ class WooferBotCommandHandler():
         ('+add', 'executeAdd', False),
         ('+pb', 'executePb', True),
         ('+wr', 'executeWr', True),
+        ('+splits','executeSplits', True),
         ('+dogs', 'executeDogs', False),
         ('+dogfacts', 'executeDogFacts', False),
         ('+kadgar', 'executeKadgar', False),
