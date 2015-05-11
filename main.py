@@ -40,6 +40,7 @@ def keyboard_handler():
                     bot.irc.say(channel, msg)
                 except StopIteration:
                     print 'I don\'t know that channel'
+
     print 'done'
 
 def create_bots():
