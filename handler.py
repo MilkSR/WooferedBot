@@ -20,20 +20,23 @@ class WooferBotCommandHandler():
         self.commandQueue = deque()
 
     def handleMessage(self, bot, user, channel, message):
-        self.updateDogs(bot, channel, message)
-        self.handleYoutube(bot, user, channel, message)
-        for (prefix, handler, dispatch) in self.commands:
-            if message.lower().startswith(prefix):
-                if dispatch: # handle in separate thread
-                    args = (handler, bot, user, channel, message)
-                    self.commandQueue.append(args)
-                    self.semaphore.release()
-                else:
-                    try:
-                        getattr(self, handler)(bot, user, channel, message)
-                    except Exception as e:
-                        print 'Error while handling command: ' + e.message
-                        print sys.exc_traceback.tb_lineno 
+        for c,link in config['linkedchannels'].iteritems():
+            if channel in link: self.handleMergeChat(bot, user, channel, message)
+        if channel in config['channels']:
+            self.updateDogs(bot, channel, message)
+            self.handleYoutube(bot, user, channel, message)
+            for (prefix, handler, dispatch) in self.commands:
+                if message.lower().startswith(prefix):
+                    if dispatch: # handle in separate thread
+                        args = (handler, bot, user, channel, message)
+                        self.commandQueue.append(args)
+                        self.semaphore.release()
+                    else:
+                        try:
+                            getattr(self, handler)(bot, user, channel, message)
+                        except Exception as e:
+                            print 'Error while handling command: ' + e.message
+                            print sys.exc_traceback.tb_lineno 
 
     def updateDogs(self, bot, channel, message):
         for dog in config['dogs']:
@@ -81,7 +84,7 @@ class WooferBotCommandHandler():
         config.save()
 
     def executeAdd(self, bot, user, channel, message):
-        if user == channel: # limit to owner of channel
+        if user == channel or user in config['admin_channels']: # limit to owner of channel or admin
             cmd = message.lower().split(' ')[1]
             lookup = {
                 'youtube': 'youtubechannels',
@@ -124,10 +127,15 @@ class WooferBotCommandHandler():
             record = message.split(' ',3)
             runner = record[1].lower()
             game = record[2].lower()
-            category = record[3].lower()
+            if len(record) == 4 : category = record[3].lower()
             url = "http://www.speedrun.com/api_records.php?game=" + game + "&user=" + runner
             response = urllib.urlopen(url);
             data = self.lowerDict(json.load(response))
+            if len(record) != 4:
+                if 'any%' in data.values()[0].keys():
+                    category = 'any%'
+                else:
+                    category = data.values()[0].keys()[0]
             pbTime = 0
             x = [0, 0]
             value = data.values()[0][category]
@@ -145,10 +153,10 @@ class WooferBotCommandHandler():
             if pbTime == 0:
                 bot.say(channel, "The user does not have a time in this category.")
             elif pbTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "{}'s personal record in {} {} is {}".format(runner.title(), game.title(), category.title(), timeString))
+                bot.say(channel, "{}'s personal record in {} {} is {}".format(runner.title(), game.title().encode('utf8'), category.title(), timeString))
             elif pbTime != 0 and float(x[0]) != 0:
                 pbDec = str(x[0])
-                bot.say(channel, "{}'s personal record in {} {} is {}{}".format(runner.title(), game.title(), category.title(), timeString, pbDec[1:]))
+                bot.say(channel, "{}'s personal record in {} {} is {}{}".format(runner.title(), game.title().encode('utf8'), category.title(), timeString, pbDec[1:]))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
@@ -159,10 +167,15 @@ class WooferBotCommandHandler():
         try:
             record = message.split(' ', 2)
             game = record[1].lower()
-            category = record[2].lower()
+            if len(record) == 3 : category = record[2].lower()
             url = "http://www.speedrun.com/api_records.php?game=" + game
             response = urllib.urlopen(url)
             data = self.lowerDict(json.load(response))
+            if len(record) != 3:
+                if 'any%' in data.values()[0].keys():
+                    category = 'any%'
+                else:
+                    category = data.values()[0].keys()[0]
             value = data.values()[0][category]
             wrTime = value['time'] if 'timeigt' not in value.keys() else value['timeigt']
             x = [0, 0]
@@ -180,10 +193,10 @@ class WooferBotCommandHandler():
             if wrTime == 0:
                 bot.say(channel, "The specified category doesn't exist")
             elif wrTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "The world record in {} {} is {} by {}.".format(game.title(), category.title(), timeString, runner.title()))
+                bot.say(channel, "The world record in {} {} is {} by {}.".format(game.title().encode('utf8'), category.title(), timeString, runner.title()))
             elif wrTime != 0 and float(x[0]) != 0:
                 wrDec = str(x[0])
-                bot.say(channel, "The world record in {} {} is {}{} by {}".format(game.title(), category.title(), timeString, wrDec[1:], runner.title()))
+                bot.say(channel, "The world record in {} {} is {}{} by {}".format(game.title().encode('utf8'), category.title(), timeString, wrDec[1:], runner.title()))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
@@ -195,19 +208,24 @@ class WooferBotCommandHandler():
             record = message.split(' ',3)
             runner = record[1].lower()
             game = record[2].lower()
-            category = record[3].lower()
+            if len(record) == 4 : category = record[3].lower()
             url = "http://www.speedrun.com/api_records.php?game=" + game + "&user=" + runner
             response = urllib.urlopen(url);
             data = self.lowerDict(json.load(response))
+            if len(record) != 4:
+                if 'any%' in data.values()[0].keys():
+                    category = 'any%'
+                else:
+                    category = data.values()[0].keys()[0]
             splitid = 0
             x = [0, 0]
             value = data.values()[0][category]
             splitid = value['splitsio']
             game = data.keys()[0]
-            if splitid == 0:
-                bot.say(channel, "The user does splits for this category on speedrun.com.")
+            if splitid is None:
+                bot.say(channel, "The user doesn't have splits for this category on speedrun.com.")
             elif splitid != 0:
-                bot.say(channel, "{}'s splits for {} {} is splits.io/{}".format(runner.title(), game.title(), category.title(), splitid))
+                bot.say(channel, "{}'s splits for {} {} is splits.io/{}".format(runner.title(), game.title().encode('utf8'), category.title(), splitid))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
@@ -232,6 +250,28 @@ class WooferBotCommandHandler():
         videoPoster = data['items'][0]['snippet']['channelTitle']
         bot.say(channel,'{} linked : {} by {}'.format(user, title, videoPoster))
 
+    def executeMergeChat(self, bot, user, channel, message):
+        if user == channel or user in config['admin_channels']:
+            secondChat = message.split(' ')[1]
+            if secondChat not in config['channels']: bot.join(secondChat)
+            config['linkedchannels'][channel] = secondChat
+            config.save()
+            bot.say(channel, 'Chat is now merged with {}'.format(secondChat))
+            if secondChat in config['linkedchannels'][channel]: bot.say(channel, '{}\'s chat is already merged with this one!'.format(secondChat))
+
+    def executeUnmergeChat(self, bot, user, channel, message):
+        if user == channel or user in config['admin_channels']:
+                if channel in config['linkedchannels']: 
+                    del config['linkedchannels'][channel]
+                    config.save()
+                    bot.say(channel,'Unmerged')
+
+    def handleMergeChat(self, bot, user, channel, message):
+        for c,link in config['linkedchannels'].iteritems():
+            if link == channel: # something's being said in c's linked channel
+                bot.say(c,'{}: {}: {}'.format(link, user, message))
+            
+        
     def executeDogs(self, bot, user, channel, message):
         if channel in config['dogchannels']:
             bot.say(channel, ' '.join(config['dogs']))
@@ -321,6 +361,8 @@ class WooferBotCommandHandler():
         ('+pb', 'executePb', True),
         ('+wr', 'executeWr', True),
         ('+splits','executeSplits', True),
+        ('+merge', 'executeMergeChat',False),
+        ('+unmerge','executeUnmergeChat',False),
         ('+dogs', 'executeDogs', False),
         ('+dogfacts', 'executeDogFacts', False),
         ('+kadgar', 'executeKadgar', False),
