@@ -14,7 +14,9 @@ from settings import config
 YOUTUBE_LINK = re.compile(r"""\b(?:https?://)?(?:m\.|www\.)?youtu(?:be\.com|\.be)/(?:v/|watch/|.*?(?:embed|watch).*?v=)?([a-zA-Z0-9\-_]+)""")
 
 
+#--------------TODO--------------
 #Chat logging
+#Clean up speedrun garbage
 
 class WooferBotCommandHandler():
     def __init__(self):
