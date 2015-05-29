@@ -133,7 +133,7 @@ class WooferBotCommandHandler():
         if user == channel or user in config['admin_channels'] and message.split(' ')[1] not in config['admin_channels']:
             if message.split(' ')[1] == "global" and user in config['admin_channels']: 
                 config['globalignorelist'].append(message.split(' ')[2].lower())
-                bot.say(channel,"{} added to the global ignore list.".format(message.split(' ')[1]))
+                bot.say(channel,"{} added to the global ignore list.".format(message.split(' ')[2]))
                 config.save()
             else:
                 config['ignorelist'][channel].append(message.split(' ')[1].lower())
