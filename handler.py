@@ -15,8 +15,11 @@ YOUTUBE_LINK = re.compile(r"""\b(?:https?://)?(?:m\.|www\.)?youtu(?:be\.com|\.be
 
 
 #--------------TODO--------------
-#Chat logging
+#Chat logging - WIP
 #Clean up speedrun garbage
+#Mod logging
+#Custom emote reply
+#?Email thing?
 
 class WooferBotCommandHandler():
     def __init__(self):
@@ -31,6 +34,7 @@ class WooferBotCommandHandler():
             self.handleYoutube(bot, user, channel, message)
             if user not in config['ignorelist'][channel] and user not in config['globalignorelist']:
                 self.updateDogs(bot, channel, message)
+                self.updateCustom(bot, channel, message)
                 for (prefix, handler, dispatch) in self.commands:
                     if message.lower().startswith(prefix):
                         if dispatch: # handle in separate thread
@@ -40,9 +44,10 @@ class WooferBotCommandHandler():
                         else:
                             try:
                                 getattr(self, handler)(bot, user, channel, message)
-                            except Exception as e:
+                            except Exception,e:
                                 print 'Error while handling command: ' + e.message
                                 print sys.exc_traceback.tb_lineno 
+                                print e
 
     def updateDogs(self, bot, channel, message):
         for dog in config['dogs']:
@@ -53,6 +58,23 @@ class WooferBotCommandHandler():
                     bot.say(channel, dog)
                     config['dogCount'][channel][dog] = 0
 
+    def updateCustom(self, bot, channel, message):
+        if channel in config['customCommands'].keys():
+            for command in config['customCommands'][channel].keys():
+                if message.startswith(command): bot.say(channel, config['customCommands'][channel][command])
+        if channel in config['customEmoteCount'].keys():
+            for emote in config['customEmoteCount'][channel].keys():
+                if emote in message and channel in config['customEmoteCount'].keys():
+                    config['customEmoteCount'][channel][emote] += 1
+                    if config['customEmoteCount'][channel][emote] == 3:
+                        bot.say(channel, emote)
+                        config['customEmoteCount'][channel][emote] = 0
+        return
+
+    def updateLog(self, bot, channel, message):
+        if channel not in config['logging']: return
+        [channel]['log'].append(time.strftime("[%H:%M:%S]") + ' <' + user + '> ' + message)
+        
     def handleYoutube(self, bot, user, channel, message):
         if not channel in config['youtubechannels']: return
         match = YOUTUBE_LINK.search(message)
@@ -99,7 +121,8 @@ class WooferBotCommandHandler():
                 'kadgar': 'kadgarchannels',
                 'speedrun': 'speedrunchannels',
                 'dogfacts': 'dogfactschannels',
-                'dogs': 'dogchannels'
+                'dogs': 'dogchannels',
+                'logging': 'logging'
             }
             if (cmd not in lookup.keys()):
                 bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup.keys())))
@@ -118,7 +141,8 @@ class WooferBotCommandHandler():
                 'kadgar': 'kadgarchannels',
                 'speedrun': 'speedrunchannels',
                 'dogfacts': 'dogfactschannels',
-                'dogs': 'dogchannels'
+                'dogs': 'dogchannels',
+                'logging': 'logging'
             }
             if (cmd not in lookup.keys()):
                 bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup.keys())))
@@ -160,24 +184,25 @@ class WooferBotCommandHandler():
             if len(record) <= 1: runner = channel
             elif len(record) >= 1: runner = record[1].lower()
             if len(record) <= 2 :
-                twitchUrl = "https://api.twitch.tv/kraken/streams/" + channel
+                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
-                game = twitchData["stream"]["game"]
+                game = twitchData["game"]
             elif len(record) >= 2: game = record[2].lower()
             if len(record) == 4 : category = record[3].lower()
-            url = "http://www.speedrun.com/api_records.php?game=" + game + "&user=" + runner
+            url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8') + "&user=" + runner
             response = urllib.urlopen(url);
             data = self.lowerDict(json.load(response))
             if len(record) != 4:
-                twitchUrl = "https://api.twitch.tv/kraken/streams/" + channel
+                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
-                if twitchData['stream'] is not None:
-                    for cat in config['categories']:
-                        if cat in twitchData['stream']['channel']['status'].lower(): category = cat
+                for cat in config['categories']:
+                    if cat in twitchData['status'].lower(): 
+                        category = cat
+                        break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
-                else: category = data.values()[0].keys()[0]
+                elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
             pbTime = 0
             x = [0, 0]
             value = data.values()[0][category]
@@ -187,7 +212,6 @@ class WooferBotCommandHandler():
                 x = math.modf(x)
                 pbTime = x[1]
             game = data.keys()[0]
-            print pbTime
             if int(pbTime) > 3600:
                 timeString = str(datetime.timedelta(seconds=int(pbTime)))
             elif int(pbTime) < 3600:
@@ -204,31 +228,69 @@ class WooferBotCommandHandler():
             print e
             print sys.exc_traceback.tb_lineno 
 
+    def executeWrVideo(self, bot, user, channel, message):
+        try:
+            category = 'blank'
+            cat = "blank1"
+            record = message.split(' ', 3)
+            if len(record) <= 2:
+                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
+                twitchResponse = urllib.urlopen(twitchUrl);
+                twitchData = json.load(twitchResponse)
+                game = twitchData["game"]
+            else: game = record[2].lower()
+            url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8')
+            response = urllib.urlopen(url)
+            data = self.lowerDict(json.load(response))
+            if len(record) == 4 : category = record[3].lower()
+            else:
+                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
+                twitchResponse = urllib.urlopen(twitchUrl);
+                twitchData = json.load(twitchResponse)
+                for cat in config['categories']:
+                    if cat in twitchData['status'].lower(): 
+                        category = cat
+                        break
+                if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
+                elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
+            game = data.keys()[0]
+            video = data.values()[0][category]['video']
+            bot.say(channel, "The world record video for {} {} is {}".format(game.title(), category.title(), video))
+            return
+        except Exception, e:
+            bot.say(channel, "Error handling request")
+            print e
+            print sys.exc_traceback.tb_lineno 
+
     def executeWr(self, bot, user, channel, message):
         if not channel in config['speedrunchannels']: return
         try:
             category = 'blank'
             cat = "blank1"
             record = message.split(' ', 2)
+            if len(record) >= 2 and record[1] == 'video':
+                self.executeWrVideo(bot, user, channel, message);
+                return
             if len(record) <= 1:
-                twitchUrl = "https://api.twitch.tv/kraken/streams/" + channel
+                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
-                game = twitchData["stream"]["game"]
+                game = twitchData["game"]
             if len(record) != 1: game = record[1].lower()
             if len(record) == 3 : category = record[2].lower()
-            url = "http://www.speedrun.com/api_records.php?game=" + game
+            url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8')
             response = urllib.urlopen(url)
             data = self.lowerDict(json.load(response))
             if len(record) != 3:
-                twitchUrl = "https://api.twitch.tv/kraken/streams/" + channel
+                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
-                if twitchData['stream'] is not None:
-                    for cat in config['categories']:
-                        if cat in twitchData['stream']['channel']['status'].lower(): category = cat
+                for cat in config['categories']:
+                    if cat in twitchData['status'].lower(): 
+                        category = cat
+                        break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
-                else: category = data.values()[0].keys()[0]
+                elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
             value = data.values()[0][category]
             wrTime = value['time'] if 'timeigt' not in value.keys() else value['timeigt']
             x = [0, 0]
@@ -264,24 +326,25 @@ class WooferBotCommandHandler():
             if len(record) <= 1: runner = channel
             elif len(record) >= 1: runner = record[1].lower()
             if len(record) <= 2 :
-                twitchUrl = "https://api.twitch.tv/kraken/streams/" + channel
+                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
-                game = twitchData["stream"]["game"]
+                game = twitchData["game"]
             elif len(record) >= 2: game = record[2].lower()
             if len(record) == 4 : category = record[3].lower()
-            url = "http://www.speedrun.com/api_records.php?game=" + game + "&user=" + runner
+            url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8') + "&user=" + runner
             response = urllib.urlopen(url);
             data = self.lowerDict(json.load(response))
             if len(record) != 4:
-                twitchUrl = "https://api.twitch.tv/kraken/streams/" + channel
+                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
-                if twitchData['stream'] is not None:
-                    for cat in config['categories']:
-                        if cat in twitchData['stream']['channel']['status'].lower(): category = cat
+                for cat in config['categories']:
+                    if cat in twitchData['status'].lower(): 
+                        category = cat
+                        break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
-                else: category = data.values()[0].keys()[0]
+                elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
             splitid = 0
             x = [0, 0]
             value = data.values()[0][category]
@@ -295,6 +358,34 @@ class WooferBotCommandHandler():
             bot.say(channel, "Error handling request")
             print e
             print sys.exc_traceback.tb_lineno 
+
+    def executeRace(self, bot, user, channel, message):
+        try:
+            if not channel in config['speedrunchannels']: return
+            splitmessage = message.split(' ')
+            if len(splitmessage) == 1: splitmessage.append('kadgar')
+            if len(splitmessage) >= 3: fracer = splitmessage[2]
+            else: fracer = channel
+            srlurl = "http://api.speedrunslive.com/races"
+            srlresponse = urllib.urlopen(srlurl);
+            srldata = json.load(srlresponse)
+            for x in xrange(0,len(srldata['races'])):
+                srlracers = []
+                for k,v in srldata['races'][x]['entrants'].iteritems():
+                    if splitmessage[1] == 'srl' and fracer in srldata['races'][x]['entrants'][k]['twitch']:
+                        bot.say(channel, 'http://www.speedrunslive.com/race/?id={}'.format(srldata['races'][x]['id']))
+                        return
+                    if len(srldata['races'][x]['entrants'][k]['twitch']) != 0:
+                        twitchUrl = "https://api.twitch.tv/kraken/streams/" + srldata['races'][x]['entrants'][k]['twitch'].lower()
+                        twitchResponse = urllib.urlopen(twitchUrl);
+                        twitchData = json.load(twitchResponse)
+                        if twitchData['stream'] is not None: srlracers.append(srldata['races'][x]['entrants'][k]['twitch'].lower())
+                if fracer in srlracers:
+                    break
+            if fracer in srlracers and splitmessage[1] in config['multitwitch'].keys(): bot.say(channel, config['multitwitch'][splitmessage[1]] + '{}'.format('/'.join(srlracers)))
+        except Exception,e:
+            print e
+            print sys.exc_traceback.tb_lineno
 
     def lowerDict(self,d):
         e = {}
@@ -336,8 +427,7 @@ class WooferBotCommandHandler():
         for c,link in config['linkedchannels'].iteritems():
             if link == channel: # something's being said in c's linked channel
                 bot.say(c,'{}: {}: {}'.format(link, user, message))
-            
-        
+
     def executeDogs(self, bot, user, channel, message):
         if channel in config['dogchannels']:
             bot.say(channel, ' '.join(config['dogs']))
@@ -377,9 +467,28 @@ class WooferBotCommandHandler():
             if user in config['usernicks']: user = config['usernicks'][user]
             bot.say(channel, "{}: {} {} {}\r\n".format(user.title(), dog1, fact, dog2))
 
+    def executeCustom(self, bot, user, channel, message):
+        if user != channel and user not in config['admin_channels']: return
+        if message.split(' ')[1] == 'emote':
+            emotes = message.split(' ')[2:]
+            if channel not in config['customEmoteCount'].keys(): config['customEmoteCount'][channel] = {}
+            for emote in emotes: config['customEmoteCount'][channel][emote] = 0
+            config.save()
+            bot.say(channel, '{} added to emote list'.format(' '.join(emotes)))
+            return
+        elif message.split(' ')[1] == 'command':
+            command = message.split(' ')[2]
+            response = message.split(' ',3)[3]
+            if channel not in config['customCommands'].keys(): config['customCommands'][channel] = {}
+            config['customCommands'][channel][command] = response
+            bot.say(channel, '{} added to this channel\'s custom commands.'.format(command))
+            config.save()
+            return
+
     def executeKadgar(self, bot, user, channel, message):
         if channel not in config['kadgarchannels']: return
         mchannels = message.split(' ')[1:]
+        if channel not in mchannels: mchannels.append(channel)
         bot.say(channel, 'http://kadgar.net/live/{}'.format('/'.join(mchannels)))
 
     def executeNick(self, bot, user, channel, message):
@@ -392,14 +501,6 @@ class WooferBotCommandHandler():
     def executePing(self, bot, user, channel, message):
         if user == "powderedmilk_":
             bot.say(channel, "PONG")
-
-    def getSpeedruncom(self, game, category, wr):
-        if wr:
-            url = "http://www.speedrun.com/api_records.php?game=" + game
-        else:
-            url = "http://www.speedrun.com/api_records.php?game=" + game + "&amount=1500"
-        data = json.load(urllib.urlopen(url))
-        return data
 
     def start(self):
         reactor.callInThread(self.loop)
@@ -445,7 +546,9 @@ class WooferBotCommandHandler():
         ('rwanda','executeRwanda',False),
         ('+nick', 'executeNick',False),
         ('+ignore','executeIgnore',False),
-        ('+unignore','executeUnignore',False)
+        ('+unignore','executeUnignore',False),
+        ('+race','executeRace',True),
+        ('+new','executeCustom',False)
     ]
 
 

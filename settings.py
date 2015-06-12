@@ -62,7 +62,7 @@ class WooferConfig(dict):
 
     def defaults(self):
         # defaults
-        self['nickname'] = 'wooferedmilk'
+        self['nickname'] = '???'
         self['password'] = 'oauth:???????'
         self['dogs'] = ["FrankerZ", "ZreknarF", "LilZ", "ZliL", "RalpherZ", "ZrehplaR"]
         self['admin_channels'] = [self['nickname']]
