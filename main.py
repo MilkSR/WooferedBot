@@ -2,8 +2,9 @@ import sys
 import json
 from time import sleep
 from irc import WooferBotFactory
-from handler import WooferHandler
+import handler
 from twisted.internet import reactor, threads
+from twisted.python.rebuild import rebuild
 from settings import config
 
 # global variables
@@ -40,7 +41,8 @@ def keyboard_handler():
                     bot.irc.say(channel, msg)
                 except StopIteration:
                     print 'I don\'t know that channel'
-
+            
+            elif command.lower() == "reload": rebuild(handler)
     print 'done'
 
 def create_bots():
@@ -57,7 +59,7 @@ def create_bots():
 
 def shutdown():
     # stop handler, close sockets
-    WooferHandler.stop()
+    handler.WooferHandler.stop()
     for (bot, tcp) in bots:
         bot.irc.quit()
         tcp.disconnect()
@@ -69,7 +71,7 @@ if __name__ == '__main__':
     config.load()
 
     # register the thread func that handles all dispatched commands
-    WooferHandler.start()
+    handler.WooferHandler.start()
 
     # register keyboard handler, when it's down call shutdown()
     threads.callMultipleInThread([(keyboard_handler, [], {}), (shutdown, [], {})])

@@ -6,6 +6,7 @@ from twisted.internet import reactor, protocol
 from logger import ConsoleLogger
 from settings import config
 from handler import WooferHandler
+from twisted.python.rebuild import Sensitive
 
 
 class WooferBot(irc.IRCClient):

@@ -9,19 +9,20 @@ import math
 from collections import deque
 from threading import Semaphore
 from twisted.internet import reactor
+from twisted.python.rebuild import Sensitive, rebuild
 from settings import config
 
 YOUTUBE_LINK = re.compile(r"""\b(?:https?://)?(?:m\.|www\.)?youtu(?:be\.com|\.be)/(?:v/|watch/|.*?(?:embed|watch).*?v=)?([a-zA-Z0-9\-_]+)""")
 
 
 #--------------TODO--------------
+#Random SRL Host
 #Chat logging - WIP
 #Clean up speedrun garbage
 #Mod logging
-#Custom emote reply
 #?Email thing?
 
-class WooferBotCommandHandler():
+class WooferBotCommandHandler(Sensitive):
     def __init__(self):
         self.die = False
         self.semaphore = Semaphore(0)
@@ -485,6 +486,14 @@ class WooferBotCommandHandler():
             config.save()
             return
 
+    def executeDelCustom(self, bot, user, channel, message):
+            if user != channel and user not in config['admin_channels']: return
+            if message.split(' ')[1] == 'emote': del config['customEmoteCount'][channel][message.split(' ')[2]]
+            elif message.split(' ')[1] == 'command': del config['customCommands'][channel][message.split(' ')[2]]
+            bot.say(channel, '{} has been deleted'.format(message.split(' ')[2]))
+            config.save()
+            return
+
     def executeKadgar(self, bot, user, channel, message):
         if channel not in config['kadgarchannels']: return
         mchannels = message.split(' ')[1:]
@@ -496,7 +505,7 @@ class WooferBotCommandHandler():
         config.save()
 
     def executeAbout(self, bot, user, channel, message):
-        bot.say(channel, "I'm a bot made by powderedmilk_ or something, check my channel for more info.")
+        bot.say(channel, "I'm a bot made by powderedmilk_ or something, check powderedmilk.github.io/wooferedmilk for more info.")
 
     def executePing(self, bot, user, channel, message):
         if user == "powderedmilk_":
@@ -548,7 +557,10 @@ class WooferBotCommandHandler():
         ('+ignore','executeIgnore',False),
         ('+unignore','executeUnignore',False),
         ('+race','executeRace',True),
-        ('+new','executeCustom',False)
+        ('+new','executeCustom',False),
+        ('+del','executeDelCustom',False),
+        ('+delete','executeDelCustom',False),
+        ('+reload','executeReload',False)
     ]
 
 
