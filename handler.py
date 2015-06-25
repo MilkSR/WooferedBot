@@ -6,6 +6,7 @@ import datetime
 import urllib
 import sys
 import math
+import BeautifulSoup
 from collections import deque
 from threading import Semaphore
 from twisted.internet import reactor
@@ -85,6 +86,30 @@ class WooferBotCommandHandler(Sensitive):
         self.commandQueue.append(('executeYoutube', bot, user, channel, match.group(1)))
         self.semaphore.release()
 
+    def handleTwitter(self, bot, user, channel, message):
+        if not channel in config['twitterchannels']: return
+        if 'twitter.com' in message:
+        
+            self.commandQueue.append(('executeTwitter', bot, user, channel, message))
+            self.semaphore.release()
+
+    def executeTwitter(self, bot, user, channel, message):
+            for m in message.split(' '): 
+                if 'twitter' in m and m.startswith('http'): 
+                    turl = m.strip()
+                    break
+                elif 'twitter' in m and not m.startswith('http'):
+                    turl = 'http://' + m.strip()
+                    break
+            tresponse = urllib.urlopen(turl)
+            tdata = tresponse.read()
+            soup = BeautifulSoup(tdata)
+            ttitle = soup.html.head.title.encode('utf8')
+            tdisplay = ttitle.split('on')[0]
+            tuser = turl.split('/')[3]
+            tmessage = ttitle.split('Twitter:')[1]
+            bot.say(channel, tdisplay + '|' + tuser + 'tweeted' + tmessage)
+            
     def executeJoin(self, bot, user, channel, message):
         parts = message.split(' ')
         # this command can be used in two ways:
@@ -109,7 +134,7 @@ class WooferBotCommandHandler(Sensitive):
             bot.factory.addChannel(joinChannel)
 
     def executePart(self, bot, user, channel, message):
-        if user==channel:
+        if user==channel or user in config['admin_channels']:
             bot.leave(channel, 'requested by {}'.format(user))
             config['channels'].remove(channel)
             config.save()
@@ -119,6 +144,7 @@ class WooferBotCommandHandler(Sensitive):
             cmd = message.lower().split(' ')[1]
             lookup = {
                 'youtube': 'youtubechannels',
+                'twitter': 'twitterchannels',
                 'kadgar': 'kadgarchannels',
                 'speedrun': 'speedrunchannels',
                 'dogfacts': 'dogfactschannels',
@@ -139,6 +165,7 @@ class WooferBotCommandHandler(Sensitive):
             cmd = message.lower().split(' ')[1]
             lookup = {
                 'youtube': 'youtubechannels',
+                'twitter': 'twitterchannels',
                 'kadgar': 'kadgarchannels',
                 'speedrun': 'speedrunchannels',
                 'dogfacts': 'dogfactschannels',
@@ -501,7 +528,7 @@ class WooferBotCommandHandler(Sensitive):
         bot.say(channel, 'http://kadgar.net/live/{}'.format('/'.join(mchannels)))
 
     def executeNick(self, bot, user, channel, message):
-        config['usernicks'][user] = message.split(' ')[1].strip()
+        config['usernicks'][user] = message.split(' ',1)[1]
         config.save()
 
     def executeAbout(self, bot, user, channel, message):
