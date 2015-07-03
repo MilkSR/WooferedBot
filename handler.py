@@ -30,11 +30,8 @@ class WooferBotCommandHandler(Sensitive):
         self.commandQueue = deque()
 
     def handleMessage(self, bot, user, channel, message):
-        for c,link in config['linkedchannels'].iteritems():
-            if channel in link: self.handleMergeChat(bot, user, channel, message)
-        if channel in config['channels']:
             self.handleYoutube(bot, user, channel, message)
-            if user not in config['ignorelist'][channel] and user not in config['globalignorelist']:
+            if user not in config['users'][channel]['ignore'] and user not in config['globalignorelist']:
                 self.updateDogs(bot, channel, message)
                 self.updateCustom(bot, channel, message)
                 for (prefix, handler, dispatch) in self.commands:
@@ -53,62 +50,36 @@ class WooferBotCommandHandler(Sensitive):
 
     def updateDogs(self, bot, channel, message):
         for dog in config['dogs']:
-            if dog in message and channel in config['dogchannels']:
-                config['dogCount'][channel][dog] += 1
-                if config['dogCount'][channel][dog] == 3:
+            if dog in message and config['users'][channel]['dogs']:
+                config['dogsc']['dogCount'][channel][dog] += 1
+                if config['dogsc']['dogCount'][channel][dog] == 3:
                     # say dog name in channel
                     bot.say(channel, dog)
-                    config['dogCount'][channel][dog] = 0
+                    config['dogsc']['dogCount'][channel][dog] = 0
 
     def updateCustom(self, bot, channel, message):
-        if channel in config['customCommands'].keys():
-            for command in config['customCommands'][channel].keys():
-                if message.startswith(command): bot.say(channel, config['customCommands'][channel][command])
-        if channel in config['customEmoteCount'].keys():
-            for emote in config['customEmoteCount'][channel].keys():
-                if emote in message and channel in config['customEmoteCount'].keys():
-                    config['customEmoteCount'][channel][emote] += 1
-                    if config['customEmoteCount'][channel][emote] == 3:
-                        bot.say(channel, emote)
-                        config['customEmoteCount'][channel][emote] = 0
+        for command in config['users'][channel]['custom']['commands'].keys():
+            if message.startswith(command): bot.say(channel, config['users'][channel]['custom']['commands'][command])
+        for emote in config['users'][channel]['custom']['emotes'].keys():
+            if emote in message:
+                config['users'][channel]['custom']['emotes'][emote] += 1
+                if config['users'][channel]['custom']['emotes'][emote]  == 3:
+                    bot.say(channel, emote)
+                    config['users'][channel]['custom']['emotes'][emote] = 0
         return
 
-    def updateLog(self, bot, channel, message):
-        if channel not in config['logging']: return
-        [channel]['log'].append(time.strftime("[%H:%M:%S]") + ' <' + user + '> ' + message)
+    # def updateLog(self, bot, channel, message):
+        # if channel not in config['logging']: return
+        # [channel]['log'].append(time.strftime("[%H:%M:%S]") + ' <' + user + '> ' + message)
         
     def handleYoutube(self, bot, user, channel, message):
-        if not channel in config['youtubechannels']: return
+        if not config['users'][channel]['youtube']: return
         match = YOUTUBE_LINK.search(message)
         if not match:
             return
 
         self.commandQueue.append(('executeYoutube', bot, user, channel, match.group(1)))
         self.semaphore.release()
-
-    def handleTwitter(self, bot, user, channel, message):
-        if not channel in config['twitterchannels']: return
-        if 'twitter.com' in message:
-        
-            self.commandQueue.append(('executeTwitter', bot, user, channel, message))
-            self.semaphore.release()
-
-    def executeTwitter(self, bot, user, channel, message):
-            for m in message.split(' '): 
-                if 'twitter' in m and m.startswith('http'): 
-                    turl = m.strip()
-                    break
-                elif 'twitter' in m and not m.startswith('http'):
-                    turl = 'http://' + m.strip()
-                    break
-            tresponse = urllib.urlopen(turl)
-            tdata = tresponse.read()
-            soup = BeautifulSoup(tdata)
-            ttitle = soup.html.head.title.encode('utf8')
-            tdisplay = ttitle.split('on')[0]
-            tuser = turl.split('/')[3]
-            tmessage = ttitle.split('Twitter:')[1]
-            bot.say(channel, tdisplay + '|' + tuser + 'tweeted' + tmessage)
             
     def executeJoin(self, bot, user, channel, message):
         parts = message.split(' ')
@@ -117,94 +88,88 @@ class WooferBotCommandHandler(Sensitive):
         #    causing the bot to join the user's channel
         # 2) admins can request the bot to join anybodies channel
         #    entering +join <user>
-        if len(parts) == 1 and channel in config['admin_channels']:
+        if len(parts) == 1 and config['users'][channel]['admin']:
             joinChannel = user
-        elif len(parts) == 2 and user in config['admin_channels']:
+        elif len(parts) == 2 and config['users'][user]['admin']:
             joinChannel = parts[1]
         else:
             return # invalid syntax
 
-        if joinChannel in config['channels']:
+        if joinChannel in config['users'].keys():
             bot.say(channel, '{} is already in channel #{}!'.format(config['nickname'], joinChannel))
         else:
             bot.say(channel, '{} will join #{} shortly.'.format(config['nickname'], joinChannel))
-            config['dogchannels'].append(joinChannel)
-            config['ignorelist'][joinChannel] = []
+            config['users'][joinChannel]['admin'] = False
+            config['users'][joinChannel]['dogs'] = True
+            config['users'][joinChannel]['dogfacts'] = False
+            config['users'][joinChannel]['kadgar'] = False
+            config['users'][joinChannel]['speedrun'] = False
+            config['users'][joinChannel]['youtube'] = False
+            config['users'][joinChannel]['custom'] = {}
+            config['users'][joinChannel]['custom']['commands'] = {}
+            config['users'][joinChannel]['custom']['emotes'] = {}
+            config['users'][joinChannel]['ignore'] = []
+            config['channels'].append(joinChannel)
             config.save()
             bot.factory.addChannel(joinChannel)
 
     def executePart(self, bot, user, channel, message):
-        if user==channel or user in config['admin_channels']:
+        if user==channel or config['users'][user]['admin']:
             bot.leave(channel, 'requested by {}'.format(user))
+            del config['users']['channel']
             config['channels'].remove(channel)
             config.save()
 
     def executeAdd(self, bot, user, channel, message):
-        if user == channel or user in config['admin_channels']: # limit to owner of channel or admin
+        if user == channel or config['users'][user]['admin']: # limit to owner of channel or admin
             cmd = message.lower().split(' ')[1]
-            lookup = {
-                'youtube': 'youtubechannels',
-                'twitter': 'twitterchannels',
-                'kadgar': 'kadgarchannels',
-                'speedrun': 'speedrunchannels',
-                'dogfacts': 'dogfactschannels',
-                'dogs': 'dogchannels',
-                'logging': 'logging'
-            }
-            if (cmd not in lookup.keys()):
-                bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup.keys())))
-            elif channel not in config[lookup[cmd]]:
-                config[lookup[cmd]].append(channel)
+            lookup = ['dogs','dogfacts','multi','speedrun','youtube']
+            if (cmd not in lookup):
+                bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup)))
+            elif not config['users'][channel][cmd]:
+                config['users'][channel][cmd] = True
                 config.save()
-                bot.say(channel, 'You can now use functionality of \'{}\' in this channel!'.format(cmd))
+                bot.say(channel, '\'{}\' module is now active in this channel!'.format(cmd))
             else:
-                bot.say(channel, '\'{}\' already works in your channel!'.format(cmd))
+                bot.say(channel, '\'{}\' is already active in this channel!'.format(cmd))
 
     def executeDisable(self, bot, user, channel, message):
-        if user == channel or user in config['admin_channels']: # limit to owner of channel
+        if user == channel or config['users'][user]['admin']: # limit to owner of channel
             cmd = message.lower().split(' ')[1]
-            lookup = {
-                'youtube': 'youtubechannels',
-                'twitter': 'twitterchannels',
-                'kadgar': 'kadgarchannels',
-                'speedrun': 'speedrunchannels',
-                'dogfacts': 'dogfactschannels',
-                'dogs': 'dogchannels',
-                'logging': 'logging'
-            }
-            if (cmd not in lookup.keys()):
-                bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup.keys())))
-            elif channel in config[lookup[cmd]]:
-                config[lookup[cmd]].remove(channel)
+            lookup = ['dogs','dogfacts','multi','speedrun','youtube']
+            if (cmd not in lookup):
+                bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup)))
+            elif config['users'][channel][cmd]:
+                config['users'][channel][cmd] = False
                 config.save()
-                bot.say(channel, 'This channel can no longer use the functionality of \'{}\'!'.format(cmd))
+                bot.say(channel, '\'{}\' module is now inactive!'.format(cmd))
             else:
-                bot.say(channel, '\'{}\' is already off in this channel!'.format(cmd))
+                bot.say(channel, '\'{}\' is already inactive in this channel!'.format(cmd))
 
     def executeIgnore(self, bot, user, channel, message):
-        if user == channel or user in config['admin_channels'] and message.split(' ')[1] not in config['admin_channels']:
-            if message.split(' ')[1] == "global" and user in config['admin_channels']: 
+        if user == channel or config['users'][user]['admin'] and not config['users'][message.split(' ')[1]]['admin']:
+            if message.split(' ')[1] == "global" and config['users'][user]['admin']: 
                 config['globalignorelist'].append(message.split(' ')[2].lower())
                 bot.say(channel,"{} added to the global ignore list.".format(message.split(' ')[2]))
                 config.save()
             else:
-                config['ignorelist'][channel].append(message.split(' ')[1].lower())
+                config['users'][channel]['ignore'].append(message.split(' ')[1].lower())
                 bot.say(channel,"{} added to this channel's ignore list.".format(message.split(' ')[1]))
                 config.save()
 
     def executeUnignore(self, bot, user, channel, message):
-        if user == channel or user in config['admin_channels'] and message.split(' ')[1] not in config['admin_channels']:
-            if message.split(' ')[1] == "global" and user in config['admin_channels']: 
+        if user == channel or config['users'][user]['admin']:
+            if message.split(' ')[1] == "global" and config['users'][user]['admin']: 
                 config['globalignorelist'].remove(message.split(' ')[2].lower())
                 bot.say(channel,"{} removed from the global ignore list.".format(message.split(' ')[2]))
                 config.save()
             else:
-                config['ignorelist'][channel].remove(message.split(' ')[1].lower())
+                config['users'][channel]['ignore'].remove(message.split(' ')[1].lower())
                 bot.say(channel,"{} removed to this channel's ignore list.".format(message.split(' ')[1]))
                 config.save()
 
     def executePb(self, bot, user, channel, message):
-        if not channel in config['speedrunchannels']: return
+        if not config['users'][channel]['speedrun']: return
         try:
             category = 'blank'
             cat = "blank1"
@@ -291,7 +256,7 @@ class WooferBotCommandHandler(Sensitive):
             print sys.exc_traceback.tb_lineno 
 
     def executeWr(self, bot, user, channel, message):
-        if not channel in config['speedrunchannels']: return
+        if not config['users'][channel]['speedrun']: return
         try:
             category = 'blank'
             cat = "blank1"
@@ -346,7 +311,7 @@ class WooferBotCommandHandler(Sensitive):
             print sys.exc_traceback.tb_lineno 
 
     def executeSplits(self, bot, user, channel, message):
-        if not channel in config['speedrunchannels']: return
+        if not config['users'][channel]['speedrun']: return
         try:
             category = 'blank'
             cat = "blank1"
@@ -388,8 +353,8 @@ class WooferBotCommandHandler(Sensitive):
             print sys.exc_traceback.tb_lineno 
 
     def executeRace(self, bot, user, channel, message):
+        if not config['users'][channel]['speedrun']: return
         try:
-            if not channel in config['speedrunchannels']: return
             splitmessage = message.split(' ')
             if len(splitmessage) == 1: splitmessage.append('kadgar')
             if len(splitmessage) >= 3: fracer = splitmessage[2]
@@ -435,30 +400,9 @@ class WooferBotCommandHandler(Sensitive):
         if user in config['usernicks']: user = config['usernicks'][user]
         bot.say(channel,'{} linked : {} by {}'.format(user, title.encode('utf8'), videoPoster.encode('utf8')))
 
-    def executeMergeChat(self, bot, user, channel, message):
-        if user == channel or user in config['admin_channels']:
-            secondChat = message.split(' ')[1]
-            if secondChat not in config['channels']: bot.join(secondChat)
-            config['linkedchannels'][channel] = secondChat
-            config.save()
-            bot.say(channel, 'Chat is now merged with {}'.format(secondChat))
-            if secondChat in config['linkedchannels'][channel]: bot.say(channel, '{}\'s chat is already merged with this one!'.format(secondChat))
-
-    def executeUnmergeChat(self, bot, user, channel, message):
-        if user == channel or user in config['admin_channels']:
-                if channel in config['linkedchannels']: 
-                    del config['linkedchannels'][channel]
-                    config.save()
-                    bot.say(channel,'Unmerged')
-
-    def handleMergeChat(self, bot, user, channel, message):
-        for c,link in config['linkedchannels'].iteritems():
-            if link == channel: # something's being said in c's linked channel
-                bot.say(c,'{}: {}: {}'.format(link, user, message))
-
     def executeDogs(self, bot, user, channel, message):
-        if channel in config['dogchannels']:
-            bot.say(channel, ' '.join(config['dogs']))
+        if not config['users'][channel]['dogs']: return
+        bot.say(channel, ' '.join(config['dogs']))
 
     def executeZimbabwe(self, bot, user, channel, message):
         if user == "spookas_":
@@ -485,7 +429,7 @@ class WooferBotCommandHandler(Sensitive):
             bot.say(channel,'FrankerZ LilZ RalpherZ ZreknarF ZliL ZrehplaR')
 
     def executeDogFacts(self, bot, user, channel, message):
-        if not channel in config['dogfactschannels']: return
+        if not config['users'][channel]['dogfacts']: return
 
         with open('dogFacts.txt') as d:
             dogFacts = d.readlines()
@@ -496,19 +440,17 @@ class WooferBotCommandHandler(Sensitive):
             bot.say(channel, "{}: {} {} {}\r\n".format(user.title(), dog1, fact, dog2))
 
     def executeCustom(self, bot, user, channel, message):
-        if user != channel and user not in config['admin_channels']: return
+        if user != channel and not config['users'][user]['admin']: return
         if message.split(' ')[1] == 'emote':
             emotes = message.split(' ')[2:]
-            if channel not in config['customEmoteCount'].keys(): config['customEmoteCount'][channel] = {}
-            for emote in emotes: config['customEmoteCount'][channel][emote] = 0
+            for emote in emotes: config['users'][channel]['custom']['emotes'][emote] = 0
             config.save()
             bot.say(channel, '{} added to emote list'.format(' '.join(emotes)))
             return
         elif message.split(' ')[1] == 'command':
             command = message.split(' ')[2]
             response = message.split(' ',3)[3]
-            if channel not in config['customCommands'].keys(): config['customCommands'][channel] = {}
-            config['customCommands'][channel][command] = response
+            config['users'][channel]['custom']['commands'][command] = response
             bot.say(channel, '{} added to this channel\'s custom commands.'.format(command))
             config.save()
             return
@@ -521,25 +463,39 @@ class WooferBotCommandHandler(Sensitive):
             config.save()
             return
 
-    def executeKadgar(self, bot, user, channel, message):
-        if channel not in config['kadgarchannels']: return
-        mchannels = message.split(' ')[1:]
+    def executeMultitwitch(self, bot, user, channel, message):
+        if not config['users'][channel]['multi']: return
+        mchannels = message.split(' ')[2:]
+        multi = message.split(' ')[1]
+        if multi not in config['multitwitch'].keys(): bot.say(channel, 'I don\'t know {}, choose from {}'.format(multi,','.join(config['multitwitch'].keys())))
         if channel not in mchannels: mchannels.append(channel)
-        bot.say(channel, 'http://kadgar.net/live/{}'.format('/'.join(mchannels)))
+        bot.say(channel, '{}{}'.format(config['multitwitch'][multi],'/'.join(set(mchannels))))
 
     def executeNick(self, bot, user, channel, message):
         config['usernicks'][user] = message.split(' ',1)[1]
         config.save()
 
+    def executeCommands(self, bot, user, channel, message):
+        commandL = []
+        if config['users'][channel]['dogs']: commandL.append("+dogs")
+        if config['users'][channel]['dogfacts']: commandL.append("dogfacts")
+        if config['users'][channel]['multi']: commandL.append("+multi")
+        if config['users'][channel]['speedrun']: commandL.extend(["+wr","+pb","+splits","+wr video"])
+        for command in config['users'][channel]['custom']['commands'].keys(): commandL.append(command)
+        bot.say(channel,"{}'s commands are : {}".format(channel,', '.join(commandL)))
+
     def executeAbout(self, bot, user, channel, message):
         bot.say(channel, "I'm a bot made by powderedmilk_ or something, check powderedmilk.github.io/wooferedmilk for more info.")
 
     def executePing(self, bot, user, channel, message):
-        if user == "powderedmilk_":
+        if config['users'][user]['admin']:
             bot.say(channel, "PONG")
 
     def start(self):
         reactor.callInThread(self.loop)
+        
+    def saveConfig(self, bot, user, channel, message):
+        if config['users'][user]['admin']: config.save()
 
     def stop(self):
         self.die = True
@@ -569,11 +525,9 @@ class WooferBotCommandHandler(Sensitive):
         ('+pb', 'executePb', True),
         ('+wr', 'executeWr', True),
         ('+splits','executeSplits', True),
-        ('+merge', 'executeMergeChat',False),
-        ('+unmerge','executeUnmergeChat',False),
         ('+dogs', 'executeDogs', False),
         ('+dogfacts', 'executeDogFacts', False),
-        ('+kadgar', 'executeKadgar', False),
+        ('+multi','executeMultitwitch', False),
         ('zimbabwe', 'executeZimbabwe', False),
         ('+about', 'executeAbout', False),
         ('ping', 'executePing', False),
@@ -587,7 +541,9 @@ class WooferBotCommandHandler(Sensitive):
         ('+new','executeCustom',False),
         ('+del','executeDelCustom',False),
         ('+delete','executeDelCustom',False),
-        ('+reload','executeReload',False)
+        ('+reload','executeReload',False),
+        ('+savecfg','saveConfig',False),
+        ('+commands','executeCommands',False)
     ]
 
 

@@ -36,28 +36,25 @@ class WooferConfig(dict):
         config.sanitize()
 
     def save(self):
-        # remove leftovers/duplicates
-        self['channels'] = list(set(self['channels'])) # remove dupes
-        self['channels'].sort()
-        for s in ['speedrunchannels', 'kadgarchannels', 'dogfactschannels']:
-            self[s] = list(set(self['channels']) & set(self[s])) # remove invalid shit
-            self[s].sort()
-
+        for user in config['users'].keys():
+            if user not in config['channels']: config['channels'].append(user)
+        for channel in config['channels']:
+            if channel not in config['users'].keys(): config['channels'].remove(channel)
+        coppeh = self.copy()
+        del coppeh['dogsc']
         with open(WooferConfig.cfg_file, 'w') as f:
-            json.dump(self, f, indent=4, sort_keys=True)
+            json.dump(coppeh, f, indent=4, sort_keys=True)
 
     def sanitize(self):
-        for key in ['dogs', 'channels', 'admin_channels', 'dogfactschannels', 'kadgarchannels', 'speedrunchannels']:
-            if key not in self: self[key] = []
-
         # init dogcount dicts
-        if 'dogCount' not in self: self['dogCount'] = {}
-        for c in self['channels']:
-            if c not in self['dogCount']:
-                self['dogCount'][c] = {}
+        dogsc = self.setdefault('dogsc',{})
+        if 'dogCount' not in dogsc: dogsc['dogCount'] = {}
+        for c in self['users'].keys():
+            if c not in dogsc['dogCount']:
+                dogsc['dogCount'][c] = {}
             for d in self['dogs']:
-                if d not in self['dogCount'][c]:
-                    self['dogCount'][c][d] = 0
+                if d not in dogsc['dogCount'][c]:
+                    dogsc['dogCount'][c][d] = 0
 
 
     def defaults(self):
@@ -65,7 +62,6 @@ class WooferConfig(dict):
         self['nickname'] = '???'
         self['password'] = 'oauth:???????'
         self['dogs'] = ["FrankerZ", "ZreknarF", "LilZ", "ZliL", "RalpherZ", "ZrehplaR"]
-        self['admin_channels'] = [self['nickname']]
 
 
 config = WooferConfig()
