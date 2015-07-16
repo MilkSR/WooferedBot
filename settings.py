@@ -36,16 +36,27 @@ class WooferConfig(dict):
         config.sanitize()
 
     def save(self):
-        for user in config['users'].keys():
-            if user not in config['channels']: config['channels'].append(user)
-        for channel in config['channels']:
-            if channel not in config['users'].keys(): config['channels'].remove(channel)
+        config.sanitize()
         coppeh = self.copy()
         del coppeh['dogsc']
         with open(WooferConfig.cfg_file, 'w') as f:
             json.dump(coppeh, f, indent=4, sort_keys=True)
 
     def sanitize(self):
+        for user in config['users'].keys():
+            if user not in config['channels']: config['channels'].append(user)
+        for channel in config['channels']:
+            if channel not in config['users'].keys(): config['channels'].remove(channel)
+        for c in config['users'].keys():
+            for i in ['admin','dogs','multi','speedrun','youtube','utility']:
+                if i not in config['users'][c].keys(): config['users'][c][i] = False
+            if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
+            if 'custom' not in config['users'][c].keys(): 
+                config['users'][c]['custom'] = {}
+                config['users'][c]['custom']['commands'] = {}
+                config['users'][c]['custom']['emotes'] = {}
+            if 'trigger' not in config['users'][c].keys(): config['users'][c]['trigger'] = '+'
+
         # init dogcount dicts
         dogsc = self.setdefault('dogsc',{})
         if 'dogCount' not in dogsc: dogsc['dogCount'] = {}

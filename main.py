@@ -43,6 +43,7 @@ def keyboard_handler():
                     print 'I don\'t know that channel'
             
             elif command.lower() == "reload": rebuild(handler)
+            
     print 'done'
 
 def create_bots():
