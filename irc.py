@@ -80,7 +80,9 @@ class WooferBotFactory(protocol.ClientFactory):
             self.channels.append(channel)
             if not self.irc is None:
                 self.irc.join(channel)
-
+            config['users'][channel] = {}
             config['channels'].append(channel)
-            config.sanitize() # ensures dogCount is valid
+            config.sanitize() # ensures config is valid
             config.save()
+        else:
+            print 'channel was already in config'

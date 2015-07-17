@@ -1,4 +1,5 @@
 import json
+import urllib
 
 def byteify(input):
     if isinstance(input, dict):
@@ -51,11 +52,12 @@ class WooferConfig(dict):
             for i in ['admin','dogs','multi','speedrun','youtube','utility']:
                 if i not in config['users'][c].keys(): config['users'][c][i] = False
             if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
-            if 'custom' not in config['users'][c].keys(): 
+            if 'custom' not in config['users'][c].keys():
                 config['users'][c]['custom'] = {}
                 config['users'][c]['custom']['commands'] = {}
                 config['users'][c]['custom']['emotes'] = {}
             if 'trigger' not in config['users'][c].keys(): config['users'][c]['trigger'] = '+'
+            if 'mods' not in config['users'][c].keys(): config['users'][c]['mods'] = []
 
         # init dogcount dicts
         dogsc = self.setdefault('dogsc',{})
@@ -66,6 +68,12 @@ class WooferConfig(dict):
             for d in self['dogs']:
                 if d not in dogsc['dogCount'][c]:
                     dogsc['dogCount'][c][d] = 0
+
+    def updateModList(self,channel):
+        murl = "http://tmi.twitch.tv/group/user/{}/chatters".format(channel)
+        mresponse = urllib.urlopen(murl)
+        mdata = json.load(mresponse)
+        config['users'][channel]['mods'] = mdata['chatters']['moderators']
 
 
     def defaults(self):

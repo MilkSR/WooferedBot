@@ -20,7 +20,7 @@ YOUTUBE_LINK = re.compile(r"""\b(?:https?://)?(?:m\.|www\.)?youtu(?:be\.com|\.be
 
 #--------------TODO--------------
 #Random SRL Host
-#Chat logging - WIP
+#Chat logging
 #Clean up speedrun garbage
 #Mod logging
 
@@ -46,7 +46,7 @@ class WooferBotCommandHandler(Sensitive):
                                 getattr(self, handler)(bot, user, channel, message)
                             except Exception,e:
                                 print 'Error while handling command: ' + e.message
-                                print sys.exc_traceback.tb_lineno 
+                                print sys.exc_traceback.tb_lineno
                                 print e
 
     def updateDogs(self, bot, channel, message):
@@ -72,7 +72,7 @@ class WooferBotCommandHandler(Sensitive):
     # def updateLog(self, bot, channel, message):
         # if channel not in config['logging']: return
         # [channel]['log'].append(time.strftime("[%H:%M:%S]") + ' <' + user + '> ' + message)
-        
+
     def handleYoutube(self, bot, user, channel, message):
         if not config['users'][channel]['youtube']: return
         match = YOUTUBE_LINK.search(message)
@@ -81,7 +81,7 @@ class WooferBotCommandHandler(Sensitive):
 
         self.commandQueue.append(('executeYoutube', bot, user, channel, match.group(1)))
         self.semaphore.release()
-            
+
     def executeJoin(self, bot, user, channel, message):
         parts = message.split(' ')
         # this command can be used in two ways:
@@ -100,19 +100,6 @@ class WooferBotCommandHandler(Sensitive):
             bot.say(channel, '{} is already in channel #{}!'.format(config['nickname'], joinChannel))
         else:
             bot.say(channel, '{} will join #{} shortly.'.format(config['nickname'], joinChannel))
-            config['users'][joinChannel] = {}
-            config['users'][joinChannel]['admin'] = False
-            config['users'][joinChannel]['dogs'] = True
-            config['users'][joinChannel]['dogfacts'] = False
-            config['users'][joinChannel]['multi'] = False
-            config['users'][joinChannel]['speedrun'] = False
-            config['users'][joinChannel]['youtube'] = False
-            config['users'][joinChannel]['custom'] = {}
-            config['users'][joinChannel]['custom']['commands'] = {}
-            config['users'][joinChannel]['custom']['emotes'] = {}
-            config['users'][joinChannel]['ignore'] = []
-            config['channels'].append(joinChannel)
-            config.save()
             bot.factory.addChannel(joinChannel)
 
     def executePart(self, bot, user, channel, message):
@@ -123,7 +110,8 @@ class WooferBotCommandHandler(Sensitive):
             config.save()
 
     def executeAdd(self, bot, user, channel, message):
-        if user == channel or config['users'][user]['admin']: # limit to owner of channel or admin
+        config.updateModList(channel)
+        if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']: # limit to owner of channel or admin
             cmd = message.lower().split(' ')[1]
             lookup = ['dogs','dogfacts','multi','speedrun','youtube','utility']
             if (cmd not in lookup):
@@ -150,7 +138,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeIgnore(self, bot, user, channel, message):
         if user == channel or config['users'][user]['admin']:
-            if message.split(' ')[1] == "global" and config['users'][user]['admin']: 
+            if message.split(' ')[1] == "global" and config['users'][user]['admin']:
                 config['globalignorelist'].append(message.split(' ')[2].lower())
                 bot.say(channel,"{} added to the global ignore list.".format(message.split(' ')[2]))
                 config.save()
@@ -161,7 +149,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeUnignore(self, bot, user, channel, message):
         if user == channel or config['users'][user]['admin']:
-            if message.split(' ')[1] == "global" and config['users'][user]['admin']: 
+            if message.split(' ')[1] == "global" and config['users'][user]['admin']:
                 config['globalignorelist'].remove(message.split(' ')[2].lower())
                 bot.say(channel,"{} removed from the global ignore list.".format(message.split(' ')[2]))
                 config.save()
@@ -195,7 +183,7 @@ class WooferBotCommandHandler(Sensitive):
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
                 for cat in config['categories']:
-                    if cat in twitchData['status'].lower(): 
+                    if cat in twitchData['status'].lower():
                         category = cat
                         break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
@@ -223,7 +211,7 @@ class WooferBotCommandHandler(Sensitive):
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
-            print sys.exc_traceback.tb_lineno 
+            print sys.exc_traceback.tb_lineno
 
     def executeWrVideo(self, bot, user, channel, message):
         try:
@@ -247,7 +235,7 @@ class WooferBotCommandHandler(Sensitive):
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
                 for cat in config['categories']:
-                    if cat in twitchData['status'].lower(): 
+                    if cat in twitchData['status'].lower():
                         category = cat
                         break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
@@ -259,7 +247,7 @@ class WooferBotCommandHandler(Sensitive):
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
-            print sys.exc_traceback.tb_lineno 
+            print sys.exc_traceback.tb_lineno
 
     def executeWr(self, bot, user, channel, message):
         if not config['users'][channel]['speedrun']: return
@@ -287,7 +275,7 @@ class WooferBotCommandHandler(Sensitive):
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
                 for cat in config['categories']:
-                    if cat in twitchData['status'].lower(): 
+                    if cat in twitchData['status'].lower():
                         category = cat
                         break
             if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
@@ -315,7 +303,7 @@ class WooferBotCommandHandler(Sensitive):
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
-            print sys.exc_traceback.tb_lineno 
+            print sys.exc_traceback.tb_lineno
 
     def executeSplits(self, bot, user, channel, message):
         if not config['users'][channel]['speedrun']: return
@@ -342,7 +330,7 @@ class WooferBotCommandHandler(Sensitive):
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
                 for cat in config['categories']:
-                    if cat in twitchData['status'].lower(): 
+                    if cat in twitchData['status'].lower():
                         category = cat
                         break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
@@ -359,7 +347,7 @@ class WooferBotCommandHandler(Sensitive):
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
-            print sys.exc_traceback.tb_lineno 
+            print sys.exc_traceback.tb_lineno
 
     def executeRace(self, bot, user, channel, message):
         if not config['users'][channel]['speedrun']: return
@@ -399,7 +387,7 @@ class WooferBotCommandHandler(Sensitive):
             else:
                 e[k.lower()] = v
         return e
-            
+
     def executeYoutube(self, bot, user, channel, video_id):
         url = "https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2Cstatistics&id={}&fields=items(id%2Csnippet(title%2CchannelTitle)%2CcontentDetails(duration)%2Cstatistics(viewCount%2ClikeCount%2CdislikeCount))&key={}".format(video_id, config["YTAuthKey"])
         response = urllib.urlopen(url)
@@ -474,7 +462,7 @@ class WooferBotCommandHandler(Sensitive):
         elif message.split(' ')[1] == 'global':
             command = message.split(' ')[3]
             response = message.split(' ',4)[4]
-            
+
 
     def executeDelCustom(self, bot, user, channel, message):
             if user != channel and not config['users'][user]['admin']: return
@@ -543,7 +531,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def start(self):
         reactor.callInThread(self.loop)
-        
+
     def saveConfig(self, bot, user, channel, message):
         if config['users'][user]['admin']:
             config.save()
