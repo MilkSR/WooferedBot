@@ -111,7 +111,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeAdd(self, bot, user, channel, message):
         config.updateModList(channel)
-        if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']: # limit to owner of channel or admin
+        if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']:
             cmd = message.lower().split(' ')[1]
             lookup = ['dogs','dogfacts','multi','speedrun','youtube','utility']
             if (cmd not in lookup):
@@ -124,7 +124,8 @@ class WooferBotCommandHandler(Sensitive):
                 bot.say(channel, '\'{}\' is already active in this channel!'.format(cmd))
 
     def executeDisable(self, bot, user, channel, message):
-        if user == channel or config['users'][user]['admin']: # limit to owner of channel
+        config.updateModList(channel)
+        if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']:
             cmd = message.lower().split(' ')[1]
             lookup = ['dogs','dogfacts','multi','speedrun','youtube','utility']
             if (cmd not in lookup):
@@ -137,7 +138,8 @@ class WooferBotCommandHandler(Sensitive):
                 bot.say(channel, '\'{}\' is already inactive in this channel!'.format(cmd))
 
     def executeIgnore(self, bot, user, channel, message):
-        if user == channel or config['users'][user]['admin']:
+        config.updateModList(channel)
+        if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']:
             if message.split(' ')[1] == "global" and config['users'][user]['admin']:
                 config['globalignorelist'].append(message.split(' ')[2].lower())
                 bot.say(channel,"{} added to the global ignore list.".format(message.split(' ')[2]))
@@ -148,7 +150,8 @@ class WooferBotCommandHandler(Sensitive):
                 config.save()
 
     def executeUnignore(self, bot, user, channel, message):
-        if user == channel or config['users'][user]['admin']:
+        config.updateModList(channel)
+        if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']:
             if message.split(' ')[1] == "global" and config['users'][user]['admin']:
                 config['globalignorelist'].remove(message.split(' ')[2].lower())
                 bot.say(channel,"{} removed from the global ignore list.".format(message.split(' ')[2]))
@@ -490,29 +493,47 @@ class WooferBotCommandHandler(Sensitive):
         if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(config['users'][channel]['trigger']))
         if config['users'][channel]['multi']: commandL.append("{}multi".format(config['users'][channel]['trigger']))
         if config['users'][channel]['speedrun']: commandL.extend(["{}wr".format(config['users'][channel]['trigger']),"{}pb".format(config['users'][channel]['trigger']),"{}splits".format(config['users'][channel]['trigger']),"{}wr video".format(config['users'][channel]['trigger'])])
-        if config['users'][channel]['utility']: commandL.append("{}uptime".format(config['users'][channel]['trigger']))
+        if config['users'][channel]['utility']: commandL.extend(["{}uptime".format(config['users'][channel]['trigger']),"{}hl".format(config['users'][channel]['trigger']),"{}dhl".format(config['users'][channel]['trigger']),"{}highlights".format(config['users'][channel]['trigger'])])
         for command in config['users'][channel]['custom']['commands'].keys(): commandL.append(command)
         bot.say(channel,"{}'s commands are : {}".format(channel,', '.join(commandL)))
 
     def executeAbout(self, bot, user, channel, message):
-        bot.say(channel, "I'm a bot made by powderedmilk_ or something, check powderedmilk.github.io/wooferedmilk for more info. [Bot Last Updated: July 5th, 2015][Bot's Site Last Updated:  June 30th, 2015]")
+        bot.say(channel, "I'm a bot made by powderedmilk_ or something, check powderedmilk.github.io/wooferedmilk for more info. [Bot Last Updated: July 18th, 2015][Bot's Site Last Updated:  June 30th, 2015]")
+
+    def getLiveSince(self, bot, user, channel):
+        url = "https://api.twitch.tv/kraken/streams/" + channel
+        response = urllib.urlopen(url)
+        data = json.load(response)
+        if data['stream'] is None: return 0
+        startTime = data['stream']['created_at']
+        a = isodate.parse_datetime(startTime)
+        b = datetime.datetime.now(pytz.utc)
+        liveSince = b - a
+        return liveSince
 
     def executeUptime(self, bot, user, channel, message):
         if not config['users'][channel]['utility']: return
-        try:
-            url = "https://api.twitch.tv/kraken/streams/" + channel
-            response = urllib.urlopen(url)
-            data = json.load(response)
-            if data['stream'] is None:
-                bot.say(channel, "{} isn't currently live".format(channel))
-                return
-            startTime = data['stream']['created_at']
-            a = isodate.parse_datetime(startTime)
-            b = datetime.datetime.now(pytz.utc)
-            liveSince = b - a
-            bot.say(channel, "{} has been live for {}".format(channel,str(liveSince)[:-7]))
-        except Exception,e:
-            print e
+        if self.getLiveSince(bot, user, channel) is not 0: bot.say(channel, "{} has been live for {}".format(channel,str(self.getLiveSince(bot, user, channel))[:-7]))
+        else: bot.say(channel,"{} is not currently live".format(channel))
+
+    def addHighlight(self, bot, user, channel, message):
+        config.updateModList(channel)
+        if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']:
+            liveSince = str(self.getLiveSince(bot,user,channel))[:-7]
+            if liveSince is not "0":
+                config['users'][channel]['highlights'].append(liveSince + ' "{}"'.format(message.split(' ',1)[1]))
+                bot.say(channel,"{} added to highlight list".format(liveSince))
+                config.save()
+
+    def returnHighlights(self, bot, user, channel, message):
+        if user != channel and not config['users'][user]['admin']: return
+        bot.say(channel,"The timestamp for the highlights of your last broadcast are {}".format(', '.join(config['users'][channel]['highlights'])))
+
+    def delHighlights(self, bot, user, channel, message):
+        if user != channel and not config['users'][user]['admin']: return
+        config['users'][channel]['highlights'] = []
+        bot.say(channel,"Highlight timestamps deleted.")
+        config.save()
 
     def executePing(self, bot, user, channel, message):
         if config['users'][user]['admin']:
@@ -560,8 +581,8 @@ class WooferBotCommandHandler(Sensitive):
     commands = [
         ('{}join', 'executeJoin', False),
         ('{}part', 'executePart', False),
-        ('{}add', 'executeAdd', False),
-        ('{}disable', 'executeDisable', False),
+        ('{}add', 'executeAdd', True),
+        ('{}disable', 'executeDisable', True),
         ('{}pb', 'executePb', True),
         ('{}wr', 'executeWr', True),
         ('{}splits','executeSplits', True),
@@ -575,8 +596,8 @@ class WooferBotCommandHandler(Sensitive):
         ('botswana','executeBotswana',False),
         ('rwanda','executeRwanda',False),
         ('{}nick', 'executeNick',False),
-        ('{}ignore','executeIgnore',False),
-        ('{}unignore','executeUnignore',False),
+        ('{}ignore','executeIgnore',True),
+        ('{}unignore','executeUnignore',True),
         ('{}race','executeRace',True),
         ('{}new','executeCustom',False),
         ('{}del','executeDelCustom',False),
@@ -587,7 +608,10 @@ class WooferBotCommandHandler(Sensitive):
         ('+users','executeUserBase',False),
         ('{}set','executeSet',False),
         ('{}admins','getAdmins',False),
-        ('{}uptime','executeUptime',True)
+        ('{}uptime','executeUptime',True),
+        ('{}hl','addHighlight',True),
+        ('{}dhl','delHighlights',False),
+        ('{}highlights','returnHighlights',False)
     ]
 
 
