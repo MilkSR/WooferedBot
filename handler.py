@@ -273,7 +273,7 @@ class WooferBotCommandHandler(Sensitive):
             data = json.load(response)
             dataCopy = data.copy()
             data = self.lowerDict(data)
-            if len(record) < 2:
+            if len(record) < 3:
                 twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
                 twitchResponse = urllib.urlopen(twitchUrl);
                 twitchData = json.load(twitchResponse)
@@ -281,8 +281,8 @@ class WooferBotCommandHandler(Sensitive):
                     if cat in twitchData['status'].lower():
                         category = cat
                         break
-            if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
-            elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
+                if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
+                elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
             value = data.values()[0][category]
             wrTime = value['time'] if 'timeigt' not in value.keys() else value['timeigt']
             x = [0, 0]
@@ -497,6 +497,9 @@ class WooferBotCommandHandler(Sensitive):
         for command in config['users'][channel]['custom']['commands'].keys(): commandL.append(command)
         bot.say(channel,"{}'s commands are : {}".format(channel,', '.join(commandL)))
 
+    def executeModules(self, bot, user, channel, message):
+        bot.say(channel,"Available modules are: dogs, dogfacts, multi, youtube, speedrun, and utility.")
+
     def executeAbout(self, bot, user, channel, message):
         bot.say(channel, "I'm a bot made by powderedmilk_ or something, check powderedmilk.github.io/wooferedmilk for more info. [Bot Last Updated: July 18th, 2015][Bot's Site Last Updated:  June 30th, 2015]")
 
@@ -520,14 +523,18 @@ class WooferBotCommandHandler(Sensitive):
         config.updateModList(channel)
         if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']:
             liveSince = str(self.getLiveSince(bot,user,channel))[:-7]
-            if liveSince is not "0":
+            if liveSince is not "0" and len(message.split(' ',1)) == 2:
                 config['users'][channel]['highlights'].append(liveSince + ' "{}"'.format(message.split(' ',1)[1]))
+                bot.say(channel,"{} added to highlight list".format(liveSince))
+                config.save()
+            elif liveSince is not "0" and len(message.split(' ',1)) == 1:
+                config['users'][channel]['highlights'].append(liveSince)
                 bot.say(channel,"{} added to highlight list".format(liveSince))
                 config.save()
 
     def returnHighlights(self, bot, user, channel, message):
         if user != channel and not config['users'][user]['admin']: return
-        bot.say(channel,"The timestamp for the highlights of your last broadcast are {}".format(', '.join(config['users'][channel]['highlights'])))
+        bot.say(channel,"The timestamps for the highlights of your last broadcast are {}".format(', '.join(config['users'][channel]['highlights'])))
 
     def delHighlights(self, bot, user, channel, message):
         if user != channel and not config['users'][user]['admin']: return
@@ -611,7 +618,8 @@ class WooferBotCommandHandler(Sensitive):
         ('{}uptime','executeUptime',True),
         ('{}hl','addHighlight',True),
         ('{}dhl','delHighlights',False),
-        ('{}highlights','returnHighlights',False)
+        ('{}highlights','returnHighlights',False),
+        ('{}modules','executeModules',False)
     ]
 
 
