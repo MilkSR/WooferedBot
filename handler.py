@@ -491,17 +491,16 @@ class WooferBotCommandHandler(Sensitive):
         bot.say(channel,"Available modules are: dogs, dogfacts, multi, youtube, speedrun, and utility.")
 
     def executeHelp(self, bot, user, channel, message):
-        if not user == channel and not config['users'][user]['admin']: return
         parts = message.split(' ')
         if len(parts) == 2 and config['users'][channel]['trigger'] in parts[1]: parts[1] = parts[1][1:]
-        print parts
-        if len(parts) == 1: bot.say(channel,"This command is used to explain commands, for an explanation of a command do {}help {}<command you want> (without the brackets). Example: {}help {}commands".format(config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger']))
+        if len(parts) == 1: bot.say(channel,"This command is used to explain commands, for an explanation of a command do {}help {}<command you want> (without the brackets). Example: {}help commands".format(config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger']))
         elif len(parts) == 2 and parts[1] in config['commands'].keys(): bot.say(channel,config['commands'][parts[1]].format(config['users'][channel]['trigger']))
+        elif len(parts) == 2 and parts[1] in config['users'][channel]['custom']['commands'].keys() or "{}{}".format(config['users'][channel]['trigger'],parts[1]) in config['users'][channel]['custom']['commands'].keys(): bot.say(channel, "This is a custom command in this channel, to delete it type {}del command command-name".format(config['users'][channel]['trigger']))
         else: bot.say(channel, "That command isn't available or doesn't have a description, type {}commands to see available commands.".format(config['users'][channel]['trigger']))
-        print ', '.join('{}{}'.format(config['users'][channel]['trigger'], x) for x in config['commands'].keys())
+        print "{}{}".format(config['users'][channel]['trigger'],parts[1])
 
     def executeAbout(self, bot, user, channel, message):
-        bot.say(channel, "I'm a bot made by powderedmilk_ or something, check powderedmilk.github.io/wooferedmilk for more info. [Bot Last Updated: July 18th, 2015][Bot's Site Last Updated:  June 30th, 2015]")
+        bot.say(channel, "I'm a bot made by powderedmilk_ or something, use {}help for more info. [Bot Last Updated: August 6th, 2015]".format(config['users'][channel]['trigger']))
 
     def getLiveSince(self, bot, user, channel):
         url = "https://api.twitch.tv/kraken/streams/" + channel
