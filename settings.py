@@ -60,6 +60,7 @@ class WooferConfig(dict):
             if 'trigger' not in config['users'][c].keys(): config['users'][c]['trigger'] = '+'
             if 'mods' not in config['users'][c].keys(): config['users'][c]['mods'] = []
             if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
+            if 'pcommands' not in config['users'][c].keys(): config['users'][c]['pcommands'] = {}
 
         # init dogcount dicts
         dogsc = self.setdefault('dogsc',{})

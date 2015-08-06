@@ -23,6 +23,7 @@ YOUTUBE_LINK = re.compile(r"""\b(?:https?://)?(?:m\.|www\.)?youtu(?:be\.com|\.be
 #Chat logging
 #Clean up speedrun garbage
 #Mod logging
+#Global Individual Commands
 
 class WooferBotCommandHandler(Sensitive):
     def __init__(self):
@@ -34,7 +35,7 @@ class WooferBotCommandHandler(Sensitive):
             self.handleYoutube(bot, user, channel, message)
             if user not in config['users'][channel]['ignore'] and user not in config['globalignorelist']:
                 self.updateDogs(bot, channel, message)
-                self.updateCustom(bot, channel, message)
+                self.updateCustom(bot, user, channel, message)
                 for (prefix, handler, dispatch) in self.commands:
                     if message.lower().startswith(prefix.format(config['users'][channel]['trigger'])):
                         if dispatch: # handle in separate thread
@@ -58,7 +59,10 @@ class WooferBotCommandHandler(Sensitive):
                     bot.say(channel, dog)
                     config['dogsc']['dogCount'][channel][dog] = 0
 
-    def updateCustom(self, bot, channel, message):
+    def updateCustom(self, bot, user, channel, message):
+        if user in config['users'].keys():
+            for command in config['users'][user]['pcommands'].keys():
+                if message.lower().startswith(command): bot.say(channel, config['users'][user]['pcommands'][command])
         for command in config['users'][channel]['custom']['commands'].keys():
             if message.startswith(command): bot.say(channel, config['users'][channel]['custom']['commands'][command])
         for emote in config['users'][channel]['custom']['emotes'].keys():
@@ -412,30 +416,6 @@ class WooferBotCommandHandler(Sensitive):
         if not config['users'][channel]['dogs']: return
         bot.say(channel, ' '.join(config['dogs']))
 
-    def executeZimbabwe(self, bot, user, channel, message):
-        if user == "spookas_":
-            bot.say(channel, 'deeFelco')
-        else:
-            if config['users'][channel]['dogs']: bot.say(channel, 'FrankerZ LilZ RalpherZ ZreknarF ZliL ZrehplaR')
-
-    def executeRwanda(self, bot, user, channel, message):
-        if user == "spookas_":
-            bot.say(channel,'deeBenis')
-        else:
-            if config['users'][channel]['dogs']: bot.say(channel,'FrankerZ LilZ RalpherZ ZreknarF ZliL ZrehplaR')
-
-    def executeDjibouti(self, bot, user, channel, message):
-        if user=="spookas_":
-            bot.say(channel,'deeAyeSir')
-        else:
-            if config['users'][channel]['dogs']: bot.say(channel,'FrankerZ LilZ RalpherZ ZreknarF ZliL ZrehplaR')
-
-    def executeBotswana(self, bot, user, channel, message):
-        if user == "spookas_":
-            bot.say(channel,'deeArma')
-        else:
-            if config['users'][channel]['dogs']: bot.say(channel,'FrankerZ LilZ RalpherZ ZreknarF ZliL ZrehplaR')
-
     def executeDogFacts(self, bot, user, channel, message):
         if not config['users'][channel]['dogfacts']: return
 
@@ -462,9 +442,14 @@ class WooferBotCommandHandler(Sensitive):
             bot.say(channel, '{} added to this channel\'s custom commands.'.format(command))
             config.save()
             return
-        elif message.split(' ')[1] == 'global':
-            command = message.split(' ')[3]
+        elif message.split(' ')[1] == 'global' and config['users'][user]['admin']:
+            command = message.split(' ')[3].lower()
+            cuser = message.split(' ')[2]
             response = message.split(' ',4)[4]
+            config['users'][cuser]['pcommands'][command] = response
+            print config['users'][cuser]['pcommands'].keys()
+            bot.say(channel, "{} can now use {}!".format(cuser,command))
+            config.save()
 
 
     def executeDelCustom(self, bot, user, channel, message):
@@ -488,6 +473,8 @@ class WooferBotCommandHandler(Sensitive):
         config.save()
 
     def executeCommands(self, bot, user, channel, message):
+        #Fucking clean this up, please, for the love of god.
+        config.updateModList(channel)
         commandL = []
         if config['users'][channel]['dogs']: commandL.append("{}dogs".format(config['users'][channel]['trigger']))
         if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(config['users'][channel]['trigger']))
@@ -495,10 +482,23 @@ class WooferBotCommandHandler(Sensitive):
         if config['users'][channel]['speedrun']: commandL.extend(["{}wr".format(config['users'][channel]['trigger']),"{}pb".format(config['users'][channel]['trigger']),"{}splits".format(config['users'][channel]['trigger']),"{}wr video".format(config['users'][channel]['trigger'])])
         if config['users'][channel]['utility']: commandL.extend(["{}uptime".format(config['users'][channel]['trigger']),"{}hl".format(config['users'][channel]['trigger']),"{}dhl".format(config['users'][channel]['trigger']),"{}highlights".format(config['users'][channel]['trigger'])])
         for command in config['users'][channel]['custom']['commands'].keys(): commandL.append(command)
+        if user in config['users'][channel]['mods'] or user == channel: commandL.extend(["{}add".format(config['users'][channel]['trigger']),"{}disable".format(config['users'][channel]['trigger']),"{}modules".format(config['users'][channel]['trigger'])])
+        elif user in config['users'].keys() and config['users'][user]['admin']:commandL.extend(["{}add".format(config['users'][channel]['trigger']),"{}disable".format(config['users'][channel]['trigger']),"{}modules".format(config['users'][channel]['trigger'])])
+        if user in config['users'].keys() and (user == channel or config['users'][user]['admin']): commandL.append("{}part".format(config['users'][channel]['trigger']))
         bot.say(channel,"{}'s commands are : {}".format(channel,', '.join(commandL)))
 
     def executeModules(self, bot, user, channel, message):
         bot.say(channel,"Available modules are: dogs, dogfacts, multi, youtube, speedrun, and utility.")
+
+    def executeHelp(self, bot, user, channel, message):
+        if not user == channel and not config['users'][user]['admin']: return
+        parts = message.split(' ')
+        if len(parts) == 2 and config['users'][channel]['trigger'] in parts[1]: parts[1] = parts[1][1:]
+        print parts
+        if len(parts) == 1: bot.say(channel,"This command is used to explain commands, for an explanation of a command do {}help {}<command you want> (without the brackets). Example: {}help {}commands".format(config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger']))
+        elif len(parts) == 2 and parts[1] in config['commands'].keys(): bot.say(channel,config['commands'][parts[1]].format(config['users'][channel]['trigger']))
+        else: bot.say(channel, "That command isn't available or doesn't have a description, type {}commands to see available commands.".format(config['users'][channel]['trigger']))
+        print ', '.join('{}{}'.format(config['users'][channel]['trigger'], x) for x in config['commands'].keys())
 
     def executeAbout(self, bot, user, channel, message):
         bot.say(channel, "I'm a bot made by powderedmilk_ or something, check powderedmilk.github.io/wooferedmilk for more info. [Bot Last Updated: July 18th, 2015][Bot's Site Last Updated:  June 30th, 2015]")
@@ -541,10 +541,6 @@ class WooferBotCommandHandler(Sensitive):
         config['users'][channel]['highlights'] = []
         bot.say(channel,"Highlight timestamps deleted.")
         config.save()
-
-    def executePing(self, bot, user, channel, message):
-        if config['users'][user]['admin']:
-            bot.say(channel, "PONG")
 
     def executeUserBase(self, bot, user, channel, message):
         if config['users'][user]['admin']: bot.say(channel,str(len(config['users'].keys())))
@@ -596,12 +592,8 @@ class WooferBotCommandHandler(Sensitive):
         ('{}dogs', 'executeDogs', False),
         ('{}dogfacts', 'executeDogFacts', False),
         ('{}multi','executeMultitwitch', False),
-        ('zimbabwe', 'executeZimbabwe', False),
         ('{}about', 'executeAbout', False),
         ('ping', 'executePing', False),
-        ('djibouti','executeDjibouti',False),
-        ('botswana','executeBotswana',False),
-        ('rwanda','executeRwanda',False),
         ('{}nick', 'executeNick',False),
         ('{}ignore','executeIgnore',True),
         ('{}unignore','executeUnignore',True),
@@ -611,7 +603,7 @@ class WooferBotCommandHandler(Sensitive):
         ('{}delete','executeDelCustom',False),
         ('{}reload','executeReload',False),
         ('+savecfg','saveConfig',False),
-        ('{}commands','executeCommands',False),
+        ('{}commands','executeCommands',True),
         ('+users','executeUserBase',False),
         ('{}set','executeSet',False),
         ('{}admins','getAdmins',False),
@@ -619,7 +611,8 @@ class WooferBotCommandHandler(Sensitive):
         ('{}hl','addHighlight',True),
         ('{}dhl','delHighlights',False),
         ('{}highlights','returnHighlights',False),
-        ('{}modules','executeModules',False)
+        ('{}modules','executeModules',False),
+        ('{}help','executeHelp',False)
     ]
 
 
