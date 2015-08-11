@@ -476,6 +476,7 @@ class WooferBotCommandHandler(Sensitive):
         #Fucking clean this up, please, for the love of god.
         config.updateModList(channel)
         commandL = []
+        commandL.extend(["{}help".format(config['users'][channel]['trigger']),"{}about".format(config['users'][channel]['trigger'])])
         if config['users'][channel]['dogs']: commandL.append("{}dogs".format(config['users'][channel]['trigger']))
         if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(config['users'][channel]['trigger']))
         if config['users'][channel]['multi']: commandL.append("{}multi".format(config['users'][channel]['trigger']))
@@ -493,7 +494,7 @@ class WooferBotCommandHandler(Sensitive):
     def executeHelp(self, bot, user, channel, message):
         parts = message.split(' ')
         if len(parts) == 2 and config['users'][channel]['trigger'] in parts[1]: parts[1] = parts[1][1:]
-        if len(parts) == 1: bot.say(channel,"This command is used to explain commands, for an explanation of a command do {}help {}<command you want> (without the brackets). Example: {}help commands".format(config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger']))
+        if len(parts) == 1: bot.say(channel,"This command is used to explain commands, for an explanation of a command do {}help <command> (without the brackets). Example: {}help commands".format(config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger']))
         elif len(parts) == 2 and parts[1] in config['commands'].keys(): bot.say(channel,config['commands'][parts[1]].format(config['users'][channel]['trigger']))
         elif len(parts) == 2 and parts[1] in config['users'][channel]['custom']['commands'].keys() or "{}{}".format(config['users'][channel]['trigger'],parts[1]) in config['users'][channel]['custom']['commands'].keys(): bot.say(channel, "This is a custom command in this channel, to delete it type {}del command command-name".format(config['users'][channel]['trigger']))
         else: bot.say(channel, "That command isn't available or doesn't have a description, type {}commands to see available commands.".format(config['users'][channel]['trigger']))
@@ -592,7 +593,6 @@ class WooferBotCommandHandler(Sensitive):
         ('{}dogfacts', 'executeDogFacts', False),
         ('{}multi','executeMultitwitch', False),
         ('{}about', 'executeAbout', False),
-        ('ping', 'executePing', False),
         ('{}nick', 'executeNick',False),
         ('{}ignore','executeIgnore',True),
         ('{}unignore','executeUnignore',True),
