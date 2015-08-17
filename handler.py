@@ -9,6 +9,7 @@ import isodate
 import math
 import pytz
 import BeautifulSoup
+import api
 from collections import deque
 from threading import Semaphore
 from twisted.internet import reactor
@@ -143,7 +144,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeIgnore(self, bot, user, channel, message):
         config.updateModList(channel)
-        if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']:
+        if user == channel or config['users'][user]['admin'] or user in config['users'][channel]['mods']:
             if message.split(' ')[1] == "global" and config['users'][user]['admin']:
                 config['globalignorelist'].append(message.split(' ')[2].lower())
                 bot.say(channel,"{} added to the global ignore list.".format(message.split(' ')[2]))
@@ -266,25 +267,19 @@ class WooferBotCommandHandler(Sensitive):
                 self.executeWrVideo(bot, user, channel, message);
                 return
             if len(record) <= 1:
-                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
-                twitchResponse = urllib.urlopen(twitchUrl);
-                twitchData = json.load(twitchResponse)
-                game = twitchData["game"]
-            if len(record) != 1: game = record[1].lower()
+                game = api.getTwitchData(bot, user, channel)['game']
+            elif len(record) != 1: game = record[1].lower()
             if len(record) == 3 : category = record[2].lower()
-            url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8')
-            response = urllib.urlopen(url)
-            data = json.load(response)
+            data = api.getSRCData(bot, user, channel, game)
             dataCopy = data.copy()
             data = self.lowerDict(data)
             if len(record) < 3:
-                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
-                twitchResponse = urllib.urlopen(twitchUrl);
-                twitchData = json.load(twitchResponse)
-                for cat in config['categories']:
-                    if cat in twitchData['status'].lower():
-                        category = cat
-                        break
+                twitchData = api.getTwitchData(bot, user, channel)
+                if len(record) >=2 and record[1] == twitchData['game']:
+                    for cat in config['categories']:
+                        if cat in twitchData['status'].lower():
+                            category = cat
+                            break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
                 elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
             value = data.values()[0][category]
@@ -396,9 +391,7 @@ class WooferBotCommandHandler(Sensitive):
         return e
 
     def executeYoutube(self, bot, user, channel, video_id):
-        url = "https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2Cstatistics&id={}&fields=items(id%2Csnippet(title%2CchannelTitle)%2CcontentDetails(duration)%2Cstatistics(viewCount%2ClikeCount%2CdislikeCount))&key={}".format(video_id, config["YTAuthKey"])
-        response = urllib.urlopen(url)
-        data = json.load(response)
+        data = api.getYouTubeData(bot, user, channel, video_id)
         title = data['items'][0]['snippet']['title']
         videoPoster = data['items'][0]['snippet']['channelTitle']
         if user in config['usernicks']: user = config['usernicks'][user]
@@ -486,7 +479,8 @@ class WooferBotCommandHandler(Sensitive):
         if user in config['users'][channel]['mods'] or user == channel: commandL.extend(["{}add".format(config['users'][channel]['trigger']),"{}disable".format(config['users'][channel]['trigger']),"{}modules".format(config['users'][channel]['trigger'])])
         elif user in config['users'].keys() and config['users'][user]['admin']:commandL.extend(["{}add".format(config['users'][channel]['trigger']),"{}disable".format(config['users'][channel]['trigger']),"{}modules".format(config['users'][channel]['trigger'])])
         if user in config['users'].keys() and (user == channel or config['users'][user]['admin']): commandL.append("{}part".format(config['users'][channel]['trigger']))
-        bot.say(channel,"{}'s commands are : {}".format(channel,', '.join(commandL)))
+        if user in config['users'].keys(): commandL.extend(config['users'][user]['pcommands'].keys())
+        bot.say(channel,"Your available commands in this channel are: {}".format(', '.join(commandL)))
 
     def executeModules(self, bot, user, channel, message):
         bot.say(channel,"Available modules are: dogs, dogfacts, multi, youtube, speedrun, and utility.")
