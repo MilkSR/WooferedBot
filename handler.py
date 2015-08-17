@@ -175,25 +175,19 @@ class WooferBotCommandHandler(Sensitive):
             if len(record) <= 1: runner = channel
             elif len(record) >= 1: runner = record[1].lower()
             if len(record) <= 2 :
-                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
-                twitchResponse = urllib.urlopen(twitchUrl);
-                twitchData = json.load(twitchResponse)
-                game = twitchData["game"]
+                game = api.getTwitchData(channel)["game"]
             elif len(record) >= 2: game = record[2].lower()
             if len(record) == 4 : category = record[3].lower()
-            url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8') + "&user=" + runner
-            response = urllib.urlopen(url);
-            data = json.load(response)
+            data = api.getSRCData(game,"pb",runner)
             dataCopy = data.copy()
             data = self.lowerDict(data)
             if len(record) != 4:
-                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
-                twitchResponse = urllib.urlopen(twitchUrl);
-                twitchData = json.load(twitchResponse)
-                for cat in config['categories']:
-                    if cat in twitchData['status'].lower():
-                        category = cat
-                        break
+                twitchData = api.getTwitchData(channel)
+                if len(record) == 3 and record[2] == twitchData['game']:
+                    for cat in config['categories']:
+                        if cat in twitchData['status'].lower():
+                            category = cat
+                            break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
                 elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
             pbTime = 0
@@ -225,27 +219,22 @@ class WooferBotCommandHandler(Sensitive):
         try:
             category = 'blank'
             cat = "blank1"
+            runner = "blank"
             record = message.split(' ', 3)
             if len(record) <= 2:
-                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
-                twitchResponse = urllib.urlopen(twitchUrl);
-                twitchData = json.load(twitchResponse)
-                game = twitchData["game"]
+                game = api.getTwitchData(channel)['game']
             else: game = record[2].lower()
-            url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8')
-            response = urllib.urlopen(url)
-            data = json.load(response)
+            data = api.getSRCData(game,"wr",runner)
             dataCopy = data.copy()
             data = self.lowerDict(data)
             if len(record) == 4 : category = record[3].lower()
             else:
-                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
-                twitchResponse = urllib.urlopen(twitchUrl);
-                twitchData = json.load(twitchResponse)
-                for cat in config['categories']:
-                    if cat in twitchData['status'].lower():
-                        category = cat
-                        break
+                twitchData = api.getTwitchData(channel)
+                if len(record) == 3 and record[2] == twitchData['game']:
+                    for cat in config['categories']:
+                        if cat in twitchData['status'].lower():
+                            category = cat
+                            break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
                 elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
             game = dataCopy.keys()[0]
@@ -262,20 +251,21 @@ class WooferBotCommandHandler(Sensitive):
         try:
             category = 'blank'
             cat = "blank1"
+            runner = "blank"
             record = message.split(' ', 2)
             if len(record) >= 2 and record[1] == 'video':
                 self.executeWrVideo(bot, user, channel, message);
                 return
             if len(record) <= 1:
-                game = api.getTwitchData(bot, user, channel)['game']
+                game = api.getTwitchData(channel)['game']
             elif len(record) != 1: game = record[1].lower()
             if len(record) == 3 : category = record[2].lower()
-            data = api.getSRCData(bot, user, channel, game)
+            data = api.getSRCData(game,"wr",runner)
             dataCopy = data.copy()
             data = self.lowerDict(data)
             if len(record) < 3:
-                twitchData = api.getTwitchData(bot, user, channel)
-                if len(record) >=2 and record[1] == twitchData['game']:
+                twitchData = api.getTwitchData(channel)
+                if len(record) == 2 and record[1] == twitchData['game']:
                     for cat in config['categories']:
                         if cat in twitchData['status'].lower():
                             category = cat
@@ -316,25 +306,19 @@ class WooferBotCommandHandler(Sensitive):
             if len(record) <= 1: runner = channel
             elif len(record) >= 1: runner = record[1].lower()
             if len(record) <= 2 :
-                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
-                twitchResponse = urllib.urlopen(twitchUrl);
-                twitchData = json.load(twitchResponse)
-                game = twitchData["game"]
+                game = api.getTwitchData(channel)['game']
             elif len(record) >= 2: game = record[2].lower()
             if len(record) == 4 : category = record[3].lower()
-            url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8') + "&user=" + runner
-            response = urllib.urlopen(url);
-            data = json.load(response)
+            data = api.getSRCData(game,"pb",runner)
             dataCopy = data.copy()
             data = self.lowerDict(data)
             if len(record) != 4:
-                twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
-                twitchResponse = urllib.urlopen(twitchUrl);
-                twitchData = json.load(twitchResponse)
+                twitchData = api.getTwitchData(channel)
                 for cat in config['categories']:
-                    if cat in twitchData['status'].lower():
-                        category = cat
-                        break
+                    if len(record) == 3 and record[2] == twitchData['game']:
+                        if cat in twitchData['status'].lower():
+                            category = cat
+                            break
                 if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
                 elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
             splitid = 0
@@ -358,9 +342,7 @@ class WooferBotCommandHandler(Sensitive):
             if len(splitmessage) == 1: splitmessage.append('kadgar')
             if len(splitmessage) >= 3: fracer = splitmessage[2]
             else: fracer = channel
-            srlurl = "http://api.speedrunslive.com/races"
-            srlresponse = urllib.urlopen(srlurl);
-            srldata = json.load(srlresponse)
+            srldata = api.getSRLData()
             for x in xrange(0,len(srldata['races'])):
                 srlracers = []
                 for k,v in srldata['races'][x]['entrants'].iteritems():
@@ -368,9 +350,7 @@ class WooferBotCommandHandler(Sensitive):
                         bot.say(channel, 'http://www.speedrunslive.com/race/?id={}'.format(srldata['races'][x]['id']))
                         return
                     if len(srldata['races'][x]['entrants'][k]['twitch']) != 0:
-                        twitchUrl = "https://api.twitch.tv/kraken/streams/" + srldata['races'][x]['entrants'][k]['twitch'].lower()
-                        twitchResponse = urllib.urlopen(twitchUrl);
-                        twitchData = json.load(twitchResponse)
+                        twitchData = api.getTwitchData(srldata['races'][x]['entrants'][k]['twitch'].lower())
                         if twitchData['stream'] is not None: srlracers.append(srldata['races'][x]['entrants'][k]['twitch'].lower())
                 if fracer in srlracers:
                     break
@@ -391,7 +371,7 @@ class WooferBotCommandHandler(Sensitive):
         return e
 
     def executeYoutube(self, bot, user, channel, video_id):
-        data = api.getYouTubeData(bot, user, channel, video_id)
+        data = api.getYouTubeData(video_id)
         title = data['items'][0]['snippet']['title']
         videoPoster = data['items'][0]['snippet']['channelTitle']
         if user in config['usernicks']: user = config['usernicks'][user]
