@@ -401,7 +401,8 @@ class WooferBotCommandHandler(Sensitive):
             bot.say(channel, "{}: {} {} {}\r\n".format(user.title(), dog1, fact, dog2))
 
     def executeCustom(self, bot, user, channel, message):
-        if user != channel and not config['users'][user]['admin']: return
+        config.updateModList(channel)
+        if user != channel and user not in config['users'][channel]['mods'] and not config['users'][user]['admin']: return
         if message.split(' ')[1] == 'emote':
             emotes = message.split(' ')[2:]
             for emote in emotes: config['users'][channel]['custom']['emotes'][emote] = 0
@@ -415,6 +416,12 @@ class WooferBotCommandHandler(Sensitive):
             bot.say(channel, '{} added to this channel\'s custom commands.'.format(command))
             config.save()
             return
+        elif message.split(' ')[1] == 'faq' and user == channel or config['users'][user]['admin']:
+            game = api.getTwitchData(channel)['game']
+            faq = message.split(' ',2)[2]
+            config['users'][channel]['faq'][game] = faq
+            bot.say(channel,"{}'s FAQ set to {}".format(game,faq))
+
         elif message.split(' ')[1] == 'global' and config['users'][user]['admin']:
             command = message.split(' ')[3].lower()
             cuser = message.split(' ')[2]
@@ -443,7 +450,14 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeNick(self, bot, user, channel, message):
         config['usernicks'][user] = message.split(' ',1)[1]
+        bot.say(channel,"{}'s nick set to {}.".format(user,config['usernicks'][user]))
         config.save()
+
+    def customFAQ(self, bot, user, channel, message):
+        if not config['users'][channel]['utility']: return
+        game = api.getTwitchData(channel)['game']
+        if game in config['users'][channel]['faq'].keys(): bot.say(channel,"The FAQ for {} is {}.".format(game,config['users'][channel]['faq'][game]))
+        else: bot.say(channel,"{} doesn't have a set FAQ in this channel, type {}new faq FAQ-link to set it for this game.".format(game, config['users'][channel]['trigger']))
 
     def executeCommands(self, bot, user, channel, message):
         #Fucking clean this up, please, for the love of god.
@@ -454,7 +468,7 @@ class WooferBotCommandHandler(Sensitive):
         if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(config['users'][channel]['trigger']))
         if config['users'][channel]['multi']: commandL.append("{}multi".format(config['users'][channel]['trigger']))
         if config['users'][channel]['speedrun']: commandL.extend(["{}wr".format(config['users'][channel]['trigger']),"{}pb".format(config['users'][channel]['trigger']),"{}splits".format(config['users'][channel]['trigger']),"{}wr video".format(config['users'][channel]['trigger'])])
-        if config['users'][channel]['utility']: commandL.extend(["{}uptime".format(config['users'][channel]['trigger']),"{}hl".format(config['users'][channel]['trigger']),"{}dhl".format(config['users'][channel]['trigger']),"{}highlights".format(config['users'][channel]['trigger'])])
+        if config['users'][channel]['utility']: commandL.extend(["{}uptime".format(config['users'][channel]['trigger']),"{}hl".format(config['users'][channel]['trigger']),"{}dhl".format(config['users'][channel]['trigger']),"{}highlights".format(config['users'][channel]['trigger']),"{}faq".format(config['users'][channel]['trigger'])])
         for command in config['users'][channel]['custom']['commands'].keys(): commandL.append(command)
         if user in config['users'][channel]['mods'] or user == channel: commandL.extend(["{}add".format(config['users'][channel]['trigger']),"{}disable".format(config['users'][channel]['trigger']),"{}modules".format(config['users'][channel]['trigger'])])
         elif user in config['users'].keys() and config['users'][user]['admin']:commandL.extend(["{}add".format(config['users'][channel]['trigger']),"{}disable".format(config['users'][channel]['trigger']),"{}modules".format(config['users'][channel]['trigger'])])
@@ -585,7 +599,8 @@ class WooferBotCommandHandler(Sensitive):
         ('{}dhl','delHighlights',False),
         ('{}highlights','returnHighlights',False),
         ('{}modules','executeModules',False),
-        ('{}help','executeHelp',False)
+        ('{}help','executeHelp', False),
+        ('{}faq', 'customFAQ', False)
     ]
 
 
