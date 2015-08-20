@@ -505,26 +505,15 @@ class WooferBotCommandHandler(Sensitive):
     def executeAbout(self, bot, user, channel, message):
         bot.say(channel, "I'm a bot made by powderedmilk_ or something, use {}help for more info. [Bot Last Updated: August 6th, 2015]".format(config['users'][channel]['trigger']))
 
-    def getLiveSince(self, bot, user, channel):
-        url = "https://api.twitch.tv/kraken/streams/" + channel
-        response = urllib.urlopen(url)
-        data = json.load(response)
-        if data['stream'] is None: return 0
-        startTime = data['stream']['created_at']
-        a = isodate.parse_datetime(startTime)
-        b = datetime.datetime.now(pytz.utc)
-        liveSince = b - a
-        return liveSince
-
     def executeUptime(self, bot, user, channel, message):
         if not config['users'][channel]['utility']: return
-        if self.getLiveSince(bot, user, channel) is not 0: bot.say(channel, "{} has been live for {}".format(channel,str(self.getLiveSince(bot, user, channel))[:-7]))
+        if api.getLiveSince(bot, user, channel) is not 0: bot.say(channel, "{} has been live for {}".format(channel,str(self.getLiveSince(bot, user, channel))[:-7]))
         else: bot.say(channel,"{} is not currently live".format(channel))
 
     def addHighlight(self, bot, user, channel, message):
         config.updateModList(channel)
         if user == channel or user in config['users'][channel]['mods'] or config['users'][user]['admin']:
-            liveSince = str(self.getLiveSince(bot,user,channel))[:-7]
+            liveSince = str(api.getLiveSince(bot,user,channel))[:-7]
             if liveSince is not "0" and len(message.split(' ',1)) == 2:
                 config['users'][channel]['highlights'].append(liveSince + ' "{}"'.format(message.split(' ',1)[1]))
                 bot.say(channel,"{} added to highlight list".format(liveSince))

@@ -24,3 +24,14 @@ def getSRLData():
     srlurl = "http://api.speedrunslive.com/races"
     srlresponse = urllib.urlopen(srlurl);
     return json.load(srlresponse)
+
+def getLiveSince(self, bot, user, channel):
+    url = "https://api.twitch.tv/kraken/streams/" + channel
+    response = urllib.urlopen(url)
+    data = json.load(response)
+    if data['stream'] is None: return 0
+    startTime = data['stream']['created_at']
+    a = isodate.parse_datetime(startTime)
+    b = datetime.datetime.now(pytz.utc)
+    liveSince = b - a
+    return liveSince
