@@ -49,7 +49,7 @@ class WooferConfig(dict):
         for channel in config['channels']:
             if channel not in config['users'].keys(): config['channels'].remove(channel)
         for c in config['users'].keys():
-            for i in ['admin','dogfacts','multi','speedrun','youtube','utility']:
+            for i in ['admin','dogfacts','multi','speedrun','youtube','utility','quote']:
                 if i not in config['users'][c].keys(): config['users'][c][i] = False
             if 'dogs' not in config['users'][c].keys(): config['users'][c]['dogs'] = True
             if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
@@ -62,6 +62,7 @@ class WooferConfig(dict):
             if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
             if 'pcommands' not in config['users'][c].keys(): config['users'][c]['pcommands'] = {}
             if 'faq' not in config['users'][c].keys(): config['users'][c]['faq'] = {}
+            if 'quotes' not in config['users'][c].keys(): config['users'][c]['quotes'] = {}
 
         # init dogcount dicts
         dogsc = self.setdefault('dogsc',{})
