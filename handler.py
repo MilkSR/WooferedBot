@@ -109,6 +109,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def executePart(self, bot, user, channel, message):
         if user==channel or config['users'][user]['admin']:
+            bot.say(channel,"Seeya LilZ /")
             bot.leave(channel, 'requested by {}'.format(user))
             del config['users'][channel]
             config['channels'].remove(channel)
@@ -215,68 +216,45 @@ class WooferBotCommandHandler(Sensitive):
             print e
             print sys.exc_traceback.tb_lineno
 
-    def executeWrVideo(self, bot, user, channel, message):
-        try:
-            category = 'blank'
-            cat = "blank1"
-            runner = "blank"
-            record = message.split(' ', 3)
-            if len(record) <= 2:
-                game = api.getTwitchData(channel)['game']
-            else: game = record[2].lower()
-            data = api.getSRCData(game,"wr",runner)
-            dataCopy = data.copy()
-            data = self.lowerDict(data)
-            if len(record) == 4 : category = record[3].lower()
-            else:
-                twitchData = api.getTwitchData(channel)
-                if len(record) == 3 and record[2] == twitchData['game']:
-                    for cat in config['categories']:
-                        if cat in twitchData['status'].lower():
-                            category = cat
-                            break
-                if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
-                elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
-            game = dataCopy.keys()[0]
-            video = data.values()[0][category]['video']
-            bot.say(channel, "The world record video for {} {} is {}".format(game, category.title(), video))
-            return
-        except Exception, e:
-            bot.say(channel, "Error handling request")
-            print e
-            print sys.exc_traceback.tb_lineno
-
     def executeWr(self, bot, user, channel, message):
         if not config['users'][channel]['speedrun']: return
         try:
-            category = 'blank'
-            cat = "blank1"
-            runner = "blank"
-            record = message.split(' ', 2)
-            if len(record) >= 2 and record[1] == 'video':
-                self.executeWrVideo(bot, user, channel, message);
-                return
-            if len(record) <= 1:
-                game = api.getTwitchData(channel)['game']
-            elif len(record) != 1: game = record[1].lower()
-            if len(record) == 3 : category = record[2].lower()
-            data = api.getSRCData(game,"wr",runner)
-            dataCopy = data.copy()
-            data = self.lowerDict(data)
-            if len(record) < 3:
+            cat = "x"
+            category = "y"
+            x = [0,0]
+            if len(message.split(' ')) == 1: game = api.getTwitchData(channel)['game']
+            else: game = message.split(' ')[1]
+            data = api.getSRCNAData(game,"wr","")
+            if data['data'] == []: data = api.getSRCNFData(game, "wr","")
+            game = data['data'][0]['names']['international']
+            if len(message.split(' ')) <= 2:
                 twitchData = api.getTwitchData(channel)
-                if len(record) == 2 and record[1] == twitchData['game']:
-                    for cat in config['categories']:
-                        if cat in twitchData['status'].lower():
-                            category = cat
-                            break
-                if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
-                elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
-            value = data.values()[0][category]
-            wrTime = value['time'] if 'timeigt' not in value.keys() else value['timeigt']
-            x = [0, 0]
-            runner = value['player']
-            game = dataCopy.keys()[0]
+                for cat in config['categories']:
+                    if cat in twitchData['status']:
+                        category = cat
+                        break
+                if category != cat:
+                    link = data['data'][0]['links'][8]['uri'] + "?embed=category,players&top=1"
+                else:
+                    link = data['data'][0]['links'][4]['uri']
+                    cData = api.getSRCNCategories(link)
+                    for c in cData['data']:
+                        if c['type'] == "per-game" and c['name'].lower() == category.lower(): link = c['links'][5]['uri'] + "?embed=category,players&top=1"
+            else:
+                category = message.split(' ',2)[2]
+                link = data['data'][0]['links'][4]['uri']
+                cData = api.getSRCNCategories(link)
+                for c in cData['data']:
+                    if c['type'] == "per-game" and c['name'].lower() == category.lower():
+                        link = c['links'][5]['uri']  + "?embed=category,players&top=1"
+                        break
+            lbdata = api.getSRCNLeaderboard(link)
+            category = lbdata['data']['category']['data']['name']
+            wrTime = lbdata['data']['runs'][0]['run']['times']['primary_t']
+            if lbdata['data']['runs'][0]['run']['videos'] is not None: video = lbdata['data']['runs'][0]['run']['videos']['links'][0]['uri']
+            else: video = "This run has no video."
+            if lbdata['data']['players']['data'][0]['rel'] == 'user': runner = lbdata['data']['players']['data'][0]['names']['international']
+            elif lbdata['data']['players']['data'][0]['rel'] == 'guest': runner = lbdata['data']['players']['data'][0]['name']
             if '.' in str(wrTime):
                 x = float(wrTime)
                 x = math.modf(x)
@@ -285,13 +263,13 @@ class WooferBotCommandHandler(Sensitive):
                 timeString = str(datetime.timedelta(seconds=int(wrTime)))
             elif int(wrTime) < 3600:
                 timeString = str(int(int(wrTime)/60)).zfill(2)+":"+str(int(wrTime)%60).zfill(2)
-            if wrTime == 0:
+            if wrTime == 0 and float(x[0]) == 0:
                 bot.say(channel, "The specified category doesn't exist")
             elif wrTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "The world record in {} {} is {} by {}.".format(game.encode('utf8'), category.title(), timeString, runner.title()))
-            elif wrTime != 0 and float(x[0]) != 0:
+                bot.say(channel, "The world record in {} {} is {} by {} | Video: {}".format(game.encode('utf8'), category, timeString, runner, video))
+            elif float(x[0]) != 0:
                 wrDec = str(x[0])
-                bot.say(channel, "The world record in {} {} is {}{} by {}".format(game.encode('utf8'), category.title(), timeString, wrDec[1:], runner.title()))
+                bot.say(channel, "The world record in {} {} is {}{} by {} | Video: {}".format(game.encode('utf8'), category, timeString, wrDec[1:], runner, video))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
@@ -391,7 +369,17 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeSlots(self, bot, user, channel, message):
         if not config['users'][channel]['dogs']: return
-        bot.say(channel,"{} {} {}".format(random.choice(config['dogs']),random.choice(config['dogs']),random.choice(config['dogs'])))
+        if user != "powderedmilk_":
+            d1 = random.choice(config['dogs'])
+            d2 = random.choice(config['dogs'])
+            d3 = random.choice(config['dogs'])
+        else:
+            d1 = random.choice(config['dogs'])
+            d2 = d1
+            d3 = d2
+        bot.say(channel,"{} {} {}".format(d1,d2,d3))
+        time.sleep(1.5)
+        if d1 == d2 and d2 == d3: bot.say(channel,"Jackpot {}".format(d1))
 
     def executeDogFacts(self, bot, user, channel, message):
         if not config['users'][channel]['dogfacts']: return
@@ -421,7 +409,7 @@ class WooferBotCommandHandler(Sensitive):
             quote = message.split(' ',2)[2]
             config['users'][channel]['quotes'][qid] = quote
             bot.say(channel,"{} added to the this channels quote list with the id:{}".format(quote,qid))
-        elif message.split(' ')[1] == 'faq' and user == channel or config['users'][user]['admin']:
+        elif message.split(' ')[1] == 'faq' and (user == channel or config['users'][user]['admin']):
             game = api.getTwitchData(channel)['game']
             faq = message.split(' ',2)[2]
             config['users'][channel]['faq'][game] = faq
@@ -438,19 +426,28 @@ class WooferBotCommandHandler(Sensitive):
 
 
     def executeDelCustom(self, bot, user, channel, message):
-            if user != channel and not config['users'][user]['admin']: return
-            if message.split(' ')[1] == 'emote': del config['users'][channel]['custom']['emotes'][message.split(' ')[2]]
-            elif message.split(' ')[1] == 'command': del config['users'][channel]['custom']['commands'][message.split(' ')[2]]
-            bot.say(channel, '{} has been deleted'.format(message.split(' ')[2]))
-            if message.split(' ')[1] == 'quote':
+            config.updateModList(channel)
+            if user != channel and user not in config['users'][channel]['mods'] and not config['users'][user]['admin']: return
+            if message.split(' ')[1] == 'emote':
+                del config['users'][channel]['custom']['emotes'][message.split(' ')[2]]
+                bot.say(channel, '{} has been deleted'.format(message.split(' ')[2]))
+            elif message.split(' ')[1] == 'command':
+                del config['users'][channel]['custom']['commands'][message.split(' ')[2]]
+                bot.say(channel, '{} has been deleted'.format(message.split(' ')[2]))
+            elif message.split(' ')[1] == 'quote':
                 del config['users'][channel]['quotes'][message.split(' ')[2]]
                 bot.say(channel, "Quote {} has been deleted!".format(message.split(' ')[2]))
+            elif message.split(' ')[1] == 'faq':
+                game = api.getTwitchData(channel)['game']
+                del config['users'][channel]['faq'][game]
+                bot.say(channel, "FAQ for {} has been deleted.".format(game))
             config.save()
             return
 
     def randomQuote(self, bot, user, channel, message):
         if not config['users'][channel]['quote']: return
-        qid = random.choice(config['users'][channel]['quotes'].keys())
+        if len(message.split(' ')) == 1: qid = random.choice(config['users'][channel]['quotes'].keys())
+        elif len(message.split(' ')) == 2: qid = message.split(' ')[1]
         bot.say(channel, "{} - id: {}".format(config['users'][channel]['quotes'][qid],qid))
 
     def executeMultitwitch(self, bot, user, channel, message):
@@ -476,7 +473,8 @@ class WooferBotCommandHandler(Sensitive):
         #Fucking clean this up, please, for the love of god.
         config.updateModList(channel)
         commandL = []
-        commandL.extend(["{}help".format(config['users'][channel]['trigger']),"{}about".format(config['users'][channel]['trigger'])])
+        if user in config['users'].keys():
+            if user == channel or config['users'][user]['admin']: commandL.extend(["{}help".format(config['users'][channel]['trigger']),"{}about".format(config['users'][channel]['trigger'])])
         if config['users'][channel]['dogs']: commandL.extend(["{}dogs".format(config['users'][channel]['trigger']),"{}slots".format(config['users'][channel]['trigger'])])
         if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(config['users'][channel]['trigger']))
         if config['users'][channel]['multi']: commandL.append("{}multi".format(config['users'][channel]['trigger']))
@@ -494,6 +492,7 @@ class WooferBotCommandHandler(Sensitive):
         bot.say(channel,"Available modules are: dogs, dogfacts, multi, youtube, speedrun, utility, and quote.")
 
     def executeHelp(self, bot, user, channel, message):
+        if user != channel and not config['users'][user]['admin']: return
         parts = message.split(' ')
         if len(parts) == 2 and config['users'][channel]['trigger'] in parts[1]: parts[1] = parts[1][1:]
         if len(parts) == 1: bot.say(channel,"This command is used to explain commands, for an explanation of a command do {}help <command> (without the brackets). Example: {}help commands".format(config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger'],config['users'][channel]['trigger']))
@@ -573,7 +572,7 @@ class WooferBotCommandHandler(Sensitive):
                   if True, dispatch to worker thread - use for slow commands like wr lookup
     '''
     commands = [
-        ('{}join', 'executeJoin', False),
+        ('+join', 'executeJoin', False),
         ('{}part', 'executePart', False),
         ('{}add', 'executeAdd', True),
         ('{}disable', 'executeDisable', True),

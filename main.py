@@ -3,6 +3,7 @@ import json
 from time import sleep
 from irc import WooferBotFactory
 import handler
+import api
 from twisted.internet import reactor, threads
 from twisted.python.rebuild import rebuild
 from settings import config
@@ -41,9 +42,11 @@ def keyboard_handler():
                     bot.irc.say(channel, msg)
                 except StopIteration:
                     print 'I don\'t know that channel'
-            
-            elif command.lower() == "reload": rebuild(handler)
-            
+
+            elif command.lower() == "reload":
+                rebuild(handler)
+                rebuild(api)
+
     print 'done'
 
 def create_bots():

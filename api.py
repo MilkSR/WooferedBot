@@ -14,6 +14,23 @@ def getSRCData(game,f,runner):
     response = urllib.urlopen(url)
     return json.load(response)
 
+def getSRCNAData(game, f, runner):
+    if f == "wr": url = "http://www.speedrun.com/api/v1/games?abbreviation={}".format(game)
+    response = urllib.urlopen(url)
+    return json.load(response)
+
+def getSRCNFData(game, f, runner):
+    if f == "wr": url = "http://www.speedrun.com/api/v1/games?name={}".format(game)
+    response = urllib.urlopen(url)
+    return json.load(response)
+
+def getSRCNCategories(category):
+    response = urllib.urlopen(category)
+    return json.load(response)
+
+def getSRCNLeaderboard(link):
+    response = urllib.urlopen(link)
+    return json.load(response)
 
 def getYouTubeData(video_id):
     url = "https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2Cstatistics&id={}&fields=items(id%2Csnippet(title%2CchannelTitle)%2CcontentDetails(duration)%2Cstatistics(viewCount%2ClikeCount%2CdislikeCount))&key={}".format(video_id, config["YTAuthKey"])
