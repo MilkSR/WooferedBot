@@ -251,10 +251,10 @@ class WooferBotCommandHandler(Sensitive):
             lbdata = api.getSRCNLeaderboard(link)
             category = lbdata['data']['category']['data']['name']
             wrTime = lbdata['data']['runs'][0]['run']['times']['primary_t']
-            if lbdata['data']['runs'][0]['run']['videos'] is not None: video = lbdata['data']['runs'][0]['run']['videos']['links'][0]['uri']
-            else: video = "This run has no video."
+            page = lbdata['data']['runs'][0]['run']['weblink']
             if lbdata['data']['players']['data'][0]['rel'] == 'user': runner = lbdata['data']['players']['data'][0]['names']['international']
             elif lbdata['data']['players']['data'][0]['rel'] == 'guest': runner = lbdata['data']['players']['data'][0]['name']
+            if len(lbdata['data']['players']['data']) > 1: runner = runner + " ({}-way tie)".format(str(len(lbdata['data']['players']['data'])))
             if '.' in str(wrTime):
                 x = float(wrTime)
                 x = math.modf(x)
@@ -266,10 +266,10 @@ class WooferBotCommandHandler(Sensitive):
             if wrTime == 0 and float(x[0]) == 0:
                 bot.say(channel, "The specified category doesn't exist")
             elif wrTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "The world record in {} {} is {} by {} | Video: {}".format(game.encode('utf8'), category, timeString, runner, video))
+                bot.say(channel, "The world record in {} {} is {} by {} | Run Page: {}".format(game.encode('utf8'), category, timeString, runner, page))
             elif float(x[0]) != 0:
                 wrDec = str(x[0])
-                bot.say(channel, "The world record in {} {} is {}{} by {} | Video: {}".format(game.encode('utf8'), category, timeString, wrDec[1:], runner, video))
+                bot.say(channel, "The world record in {} {} is {}{} by {} | Run Page: {}".format(game.encode('utf8'), category, timeString, wrDec[1:], runner, page))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
