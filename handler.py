@@ -240,7 +240,7 @@ class WooferBotCommandHandler(Sensitive):
             if len(message.split(' ')) <= 2:
                 twitchData = api.getTwitchData(channel)
                 for cat in config['categories']:
-                    if cat in twitchData['status']:
+                    if cat.lower() in twitchData['status'].lower():
                         category = cat
                         break
                 if category != cat:
