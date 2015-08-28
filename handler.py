@@ -170,47 +170,57 @@ class WooferBotCommandHandler(Sensitive):
     def executePb(self, bot, user, channel, message):
         if not config['users'][channel]['speedrun']: return
         try:
-            category = 'blank'
-            cat = "blank1"
-            record = message.split(' ',3)
-            if len(record) <= 1: runner = channel
-            elif len(record) >= 1: runner = record[1].lower()
-            if len(record) <= 2 :
-                game = api.getTwitchData(channel)["game"]
-            elif len(record) >= 2: game = record[2].lower()
-            if len(record) == 4 : category = record[3].lower()
-            data = api.getSRCData(game,"pb",runner)
-            dataCopy = data.copy()
-            data = self.lowerDict(data)
-            if len(record) != 4:
+            cat = "x"
+            category = "y"
+            x = [0,0]
+            if len(message.split(' ')) >= 2:
+                runner = message.split(' ')[1]
+                idData = api.getSRCIDData("pb","lookup=" + runner)
+                uid = idData['data'][0]['id']
+                runner = idData['data'][0]['names']['international']
+            else:
+                idData = api.getSRCIDData("pb", "twitch=" + channel)
+                uid = idData['data'][0]['id']
+                runner = idData['data'][0]['names']['international']
+            if len(message.split(' ')) <= 2: game = api.getTwitchData(channel)['game']
+            else: game = message.split(' ')[2]
+            gdata = api.getSRCNAData(game,"wr","")
+            if gdata['data'] == []: gdata = api.getSRCNFData(game, "wr","")
+            game = gdata['data'][0]['id']
+            data = api.getSRCUData(uid,game)['data']
+            if len(message.split(' ')) <= 3:
                 twitchData = api.getTwitchData(channel)
-                if len(record) == 3 and record[2] == twitchData['game']:
-                    for cat in config['categories']:
-                        if cat in twitchData['status'].lower():
-                            category = cat
-                            break
-                if 'any%' in data.values()[0].keys() and category != cat: category = 'any%'
-                elif 'any%' not in data.values()[0].keys() and category != cat: category = data.values()[0].keys()[0]
-            pbTime = 0
-            x = [0, 0]
-            value = data.values()[0][category]
-            pbTime = value['time'] if 'timeigt' not in value.keys() else value['timeigt']
+                for cat in config['categories']:
+                    if cat in twitchData['status'].lower():
+                        category = cat
+                        break
+            elif len(message.split(' ')) >= 4: category = message.split(' ',3)[3]
+            for d in data:
+                if d['category']['data']['name'].lower() == category.lower():
+                    category = d['category']['data']['name']
+                    run = d
+                    break
+            if category == "y":
+                run = data[0]
+                category = run['category']['data']['name']
+            game = data[0]['game']['data']['names']['international']
+            pbTime = run['run']['times']['primary_t']
+            page = run['run']['weblink']
             if '.' in str(pbTime):
                 x = float(pbTime)
                 x = math.modf(x)
                 pbTime = x[1]
-            game = dataCopy.keys()[0]
             if int(pbTime) > 3600:
                 timeString = str(datetime.timedelta(seconds=int(pbTime)))
             elif int(pbTime) < 3600:
                 timeString = str(int(int(pbTime)/60)).zfill(2)+":"+str(int(pbTime)%60).zfill(2)
-            if pbTime == 0:
-                bot.say(channel, "The user does not have a time in this category.")
+            if pbTime == 0 and float(x[0]) == 0:
+                bot.say(channel, "The specified category doesn't exist")
             elif pbTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "{}'s personal record in {} {} is {}".format(runner.title(), game.encode('utf8'), category.title(), timeString))
-            elif pbTime != 0 and float(x[0]) != 0:
+                bot.say(channel, "{}'s personal record in {} {} is {} | Run Page: {}".format(runner, game, category, timeString, page))
+            elif float(x[0]) != 0:
                 pbDec = str(x[0])
-                bot.say(channel, "{}'s personal record in {} {} is {}{}".format(runner.title(), game.encode('utf8'), category.title(), timeString, pbDec[1:]))
+                bot.say(channel, "{}'s personal record in {} {} is {}{} | Run Page: {}".format(runner, game, category, timeString, pbDec[1:], page))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
@@ -273,7 +283,6 @@ class WooferBotCommandHandler(Sensitive):
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
-            print sys.exc_traceback.tb_lineno
 
     def executeSplits(self, bot, user, channel, message):
         if not config['users'][channel]['speedrun']: return

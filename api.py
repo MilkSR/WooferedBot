@@ -14,6 +14,16 @@ def getSRCData(game,f,runner):
     response = urllib.urlopen(url)
     return json.load(response)
 
+def getSRCIDData(f, runner):
+    if f == "pb": url = "http://www.speedrun.com/api/v1/users?{}".format(runner)
+    response = urllib.urlopen(url)
+    return json.load(response)
+
+def getSRCUData(uid,game):
+    url = "http://www.speedrun.com/api/v1/users/{}/personal-bests?embed=game,category&game={}".format(uid,game)
+    response = urllib.urlopen(url)
+    return json.load(response)
+
 def getSRCNAData(game, f, runner):
     if f == "wr": url = "http://www.speedrun.com/api/v1/games?abbreviation={}".format(game)
     response = urllib.urlopen(url)
