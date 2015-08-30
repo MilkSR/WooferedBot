@@ -188,11 +188,13 @@ class WooferBotCommandHandler(Sensitive):
             if gdata['data'] == []: gdata = api.getSRCNFData(game, "wr","")
             game = gdata['data'][0]['id']
             data = api.getSRCUData(uid,game)['data']
+            categoryData = api.getSRCNCategories(gdata['data'][0]['links'][4]['uri'])
             if len(message.split(' ')) <= 3:
                 twitchData = api.getTwitchData(channel)
-                for cat in config['categories']:
-                    if cat in twitchData['status'].lower():
-                        category = cat
+                for cat in categoryData['data']:
+                    if cat['name'].lower() in twitchData['status'].lower():
+                        category = cat['name']
+                        cat = category
                         break
             elif len(message.split(' ')) >= 4: category = message.split(' ',3)[3]
             for d in data:
@@ -237,11 +239,13 @@ class WooferBotCommandHandler(Sensitive):
             data = api.getSRCNAData(game,"wr","")
             if data['data'] == []: data = api.getSRCNFData(game, "wr","")
             game = data['data'][0]['names']['international']
+            categoryData = api.getSRCNCategories(data['data'][0]['links'][4]['uri'])
             if len(message.split(' ')) <= 2:
                 twitchData = api.getTwitchData(channel)
-                for cat in config['categories']:
-                    if cat.lower() in twitchData['status'].lower():
-                        category = cat
+                for cat in categoryData['data']:
+                    if cat['name'].lower() in twitchData['status'].lower():
+                        category = cat['name']
+                        cat = category
                         break
                 if category != cat:
                     link = data['data'][0]['links'][8]['uri'] + "?embed=category,players&top=1"
@@ -283,6 +287,7 @@ class WooferBotCommandHandler(Sensitive):
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
+            print sys.exc_traceback.tb_lineno
 
     def executeSplits(self, bot, user, channel, message):
         if not config['users'][channel]['speedrun']: return
