@@ -1,6 +1,9 @@
 import json
 import urllib
 import handler
+import datetime
+import isodate
+import pytz
 from settings import config
 
 def getTwitchData(channel):
@@ -34,6 +37,12 @@ def getSRCNFData(game, f, runner):
     response = urllib.urlopen(url)
     return json.load(response)
 
+def getSRCRun(rid):
+    url = "http://www.speedrun.com/api/v1/runs/{}?embed=category,players,game".format(rid)
+    response = urllib.urlopen(url)
+    return json.load(response)
+
+
 def getSRCNCategories(category):
     response = urllib.urlopen(category)
     return json.load(response)
@@ -52,7 +61,7 @@ def getSRLData():
     srlresponse = urllib.urlopen(srlurl);
     return json.load(srlresponse)
 
-def getLiveSince(self, bot, user, channel):
+def getLiveSince(bot, user, channel):
     url = "https://api.twitch.tv/kraken/streams/" + channel
     response = urllib.urlopen(url)
     data = json.load(response)
