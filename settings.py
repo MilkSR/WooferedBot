@@ -44,25 +44,22 @@ class WooferConfig(dict):
             json.dump(coppeh, f, indent=4, sort_keys=True)
 
     def sanitize(self):
-        for user in config['users'].keys():
-            if user not in config['channels']: config['channels'].append(user)
-        for channel in config['channels']:
-            if channel not in config['users'].keys(): config['channels'].remove(channel)
         for c in config['users'].keys():
-            for i in ['admin','dogfacts','multi','speedrun','youtube','utility','quote']:
-                if i not in config['users'][c].keys(): config['users'][c][i] = False
-            if 'dogs' not in config['users'][c].keys(): config['users'][c]['dogs'] = True
-            if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
-            if 'custom' not in config['users'][c].keys():
-                config['users'][c]['custom'] = {}
-                config['users'][c]['custom']['commands'] = {}
-                config['users'][c]['custom']['emotes'] = {}
-            if 'trigger' not in config['users'][c].keys(): config['users'][c]['trigger'] = '+'
-            if 'mods' not in config['users'][c].keys(): config['users'][c]['mods'] = []
-            if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
             if 'pcommands' not in config['users'][c].keys(): config['users'][c]['pcommands'] = {}
-            if 'faq' not in config['users'][c].keys(): config['users'][c]['faq'] = {}
-            if 'quotes' not in config['users'][c].keys(): config['users'][c]['quotes'] = {}
+            if config['users'][c]['status'] != "chatter":
+                for i in ['dogfacts','multi','speedrun','youtube','utility','quote','faqm']:
+                    if i not in config['users'][c].keys(): config['users'][c][i] = False
+                if 'dogs' not in config['users'][c].keys(): config['users'][c]['dogs'] = True
+                if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
+                if 'custom' not in config['users'][c].keys():
+                    config['users'][c]['custom'] = {}
+                    config['users'][c]['custom']['commands'] = {}
+                    config['users'][c]['custom']['emotes'] = {}
+                if 'trigger' not in config['users'][c].keys(): config['users'][c]['trigger'] = '+'
+                if 'mods' not in config['users'][c].keys(): config['users'][c]['mods'] = []
+                if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
+                if 'faq' not in config['users'][c].keys(): config['users'][c]['faq'] = {}
+                if 'quotes' not in config['users'][c].keys(): config['users'][c]['quotes'] = {}
 
         # init dogcount dicts
         dogsc = self.setdefault('dogsc',{})

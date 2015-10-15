@@ -80,7 +80,11 @@ class WooferBotFactory(protocol.ClientFactory):
             self.channels.append(channel)
             if not self.irc is None:
                 self.irc.join(channel)
-            config['users'][channel] = {}
+            if channel in config['users'].keys():
+                config['users'][channel]['status'] = 'user'
+            else: 
+                config['users'][channel] = {}
+                config['users'][channel]['status'] = 'user'
             config['channels'].append(channel)
             config.sanitize() # ensures config is valid
             config.save()

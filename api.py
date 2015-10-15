@@ -38,7 +38,7 @@ def getSRCNFData(game, f, runner):
     return json.load(response)
 
 def getSRCRun(rid):
-    url = "http://www.speedrun.com/api/v1/runs/{}?embed=category,players,game".format(rid)
+    url = "http://www.speedrun.com/api/v1/runs/{}?embed=category,players,game,level".format(rid)
     response = urllib.urlopen(url)
     return json.load(response)
 
