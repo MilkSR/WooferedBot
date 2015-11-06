@@ -4,6 +4,8 @@ from time import sleep
 from irc import WooferBotFactory
 import handler
 import api
+import tweepy
+import auto
 from twisted.internet import reactor, threads
 from twisted.python.rebuild import rebuild
 from settings import config
@@ -71,8 +73,6 @@ def shutdown():
 
 
 if __name__ == '__main__':
-    # load config from json
-    config.load()
 
     # register the thread func that handles all dispatched commands
     handler.WooferHandler.start()
@@ -85,6 +85,6 @@ if __name__ == '__main__':
 
     # run bots
     reactor.run()
-
+    
     # save settings
     config.save()

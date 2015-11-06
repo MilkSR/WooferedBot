@@ -4,6 +4,7 @@ import handler
 import datetime
 import isodate
 import pytz
+import tweepy
 from settings import config
 
 def getTwitchData(channel):
@@ -71,3 +72,31 @@ def getLiveSince(bot, user, channel):
     b = datetime.datetime.now(pytz.utc)
     liveSince = b - a
     return liveSince
+
+def getButt(extags,page):
+    url = "https://yande.re/post/index.json?tags=ass%20{}%20-rating:explicit%20-areola%20-nipples&limit=25&page={}".format(extags,page)
+    response = urllib.urlopen(url)
+    return json.load(response)
+    
+def getLastfmData(user):
+    url = "https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user={}&api_key=57ee3318536b23ee81d6b27e36997cde&format=json".format(user)
+    response = urllib.urlopen(url)
+    return json.load(response)
+
+def getTwitterData(api,id):
+    return api.get_status(id)._json
+    
+def getFFZEmoteData(id):
+    url = "http://api.frankerfacez.com/v1/emote/{}".format(id)
+    response = urllib.urlopen(url)
+    return json.load(response)
+
+def getPokedex():
+    url = "http://www.pokeapi.co/api/v1/pokedex/1"
+    response = urllib.urlopen(url)
+    return json.load(response)
+
+def getPokemon(apiEnd):
+    url = "http://www.pokeapi.co/{}".format(apiEnd)
+    response = urllib.urlopen(url)
+    return json.load(response)

@@ -40,14 +40,19 @@ class WooferConfig(dict):
         config.sanitize()
         coppeh = self.copy()
         del coppeh['dogsc']
+        del coppeh['ltcu']
         with open(WooferConfig.cfg_file, 'w') as f:
             json.dump(coppeh, f, indent=4, sort_keys=True)
 
     def sanitize(self):
+        for c in config['channels']:
+            if c not in config['users'].keys():
+                config['users'][c] = {}
+                config['users'][c]['status'] = "user"
         for c in config['users'].keys():
             if 'pcommands' not in config['users'][c].keys(): config['users'][c]['pcommands'] = {}
             if config['users'][c]['status'] != "chatter":
-                for i in ['dogfacts','multi','speedrun','youtube','utility','quote','faqm']:
+                for i in ['dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','butts','novelty','pokedex','butt']:
                     if i not in config['users'][c].keys(): config['users'][c][i] = False
                 if 'dogs' not in config['users'][c].keys(): config['users'][c]['dogs'] = True
                 if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
@@ -60,6 +65,12 @@ class WooferConfig(dict):
                 if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
                 if 'faq' not in config['users'][c].keys(): config['users'][c]['faq'] = {}
                 if 'quotes' not in config['users'][c].keys(): config['users'][c]['quotes'] = {}
+                if 'lastfma' not in config['users'][c].keys(): config['users'][c]['lastfma'] = ""
+                if 'added by' not in config['users'][c].keys(): config['users'][c]['added by'] = "N/A"
+                if 'time added' not in config['users'][c].keys(): config['users'][c]['time added'] = "N/A"
+                if 'cooldowns' not in config['users'][c].keys() or type(config['users'][c]['cooldowns']) == "list": config['users'][c]['cooldowns'] = {}
+                for co in config['commands'].keys():
+                    if co not in config['users'][c]['cooldowns'].keys(): config['users'][c]['cooldowns'][co] = 1
 
         # init dogcount dicts
         dogsc = self.setdefault('dogsc',{})
@@ -70,13 +81,13 @@ class WooferConfig(dict):
             for d in self['dogs']:
                 if d not in dogsc['dogCount'][c]:
                     dogsc['dogCount'][c][d] = 0
-
-    def updateModList(self,channel):
-        murl = "http://tmi.twitch.tv/group/user/{}/chatters".format(channel)
-        mresponse = urllib.urlopen(murl)
-        mdata = json.load(mresponse)
-        config['users'][channel]['mods'] = mdata['chatters']['moderators']
-
+        ltcu = self.setdefault('ltcu',{})
+        if 'commands' not in ltcu: ltcu['commands'] = {}
+        for c in self['users'].keys():
+            if c not in ltcu['commands']: ltcu['commands'][c] = {}
+            for co in self['commands'].keys():
+                if co not in ltcu['commands'][c].keys():
+                    ltcu['commands'][c][co] = 0
 
     def defaults(self):
         # defaults
