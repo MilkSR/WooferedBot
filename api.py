@@ -73,8 +73,8 @@ def getLiveSince(bot, user, channel):
     liveSince = b - a
     return liveSince
 
-def getButt(extags,page):
-    url = "https://yande.re/post/index.json?tags=ass%20{}%20-rating:explicit%20-areola%20-nipples&limit=25&page={}".format(extags,page)
+def getButt(t,l,page):
+    url = "http://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&tags={}+ass+-splatoon&limit={}&pid={}".format(t,l,page)
     response = urllib.urlopen(url)
     return json.load(response)
     

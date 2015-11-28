@@ -331,7 +331,7 @@ class WooferBotCommandHandler(Sensitive):
             cat = "x"
             category = "y"
             x = [0,0]
-            if len(message.split(' ')) == 1: game = api.getTwitchData(channel)['game']
+            if len(message.split(' ')) == 1: game = api.getTwitchData(channel)['game'].encode("utf8")
             else: game = message.split(' ')[1]
             data = api.getSRCNAData(game,"wr","")
             if data['data'] == []: data = api.getSRCNFData(game, "wr","")
@@ -482,7 +482,8 @@ class WooferBotCommandHandler(Sensitive):
             config['users'][channel]['custom']['commands'][command] = response
             bot.say(channel, '{} added to this channel\'s custom commands.'.format(command))
         elif message.split(' ')[1] == 'quote' and config['users'][channel]['quote']:
-            qid = str(len(config['users'][channel]['quotes'].keys()) + 1)
+            qid = config['users'][channel]['quotes']['count']
+            config['users'][channe]['quotes']['count'] += 1
             quote = message.split(' ',2)[2]
             config['users'][channel]['quotes'][qid] = quote
             bot.say(channel,"{} added to the this channels quote list with the id:{}".format(quote,qid))
@@ -565,14 +566,16 @@ class WooferBotCommandHandler(Sensitive):
     def randomButt(self, bot, user, channel, message):
         try:
             if not config['users'][channel]['butt']: return
-            tags = random.choice(['panties','spats'])
-            if tags == 'panties': p = 149
-            else: p = 4
+            tags = random.choice(['panties','bike_shorts'])
+            if tags == 'panties': p = 88
+            else: p = 10
             page = random.randint(1,p)
-            print page
-            data = api.getButt(tags,page)
+            if page == p and tags == 'bike_shorts':  l = 27
+            elif page == p and tags == 'panties': l = 28
+            else: l = 40
+            data = api.getButt(tags,l,page)
             d = random.choice(data)
-            bot.say(channel,"Butt! https://yande.re/post/show?md5={}".format(d['md5']))
+            bot.say(channel,"FrankerZ safebooru.org/index.php?page=post&s=view&id={}".format(d['id']))
         except Exception,e:
             print e
             print sys.exc_traceback.tb_lineno
@@ -634,19 +637,20 @@ class WooferBotCommandHandler(Sensitive):
         if config['users'][channel]['quote']: commandL.append("{}quote".format(t))
         if config['users'][channel]['faqm']: commandL.append("{}faq".format(t))
         if config['users'][channel]['novelty']: commandL.append("{}8ball".format(t))
+        if config['users'][channel]['pokedex']: commandL.append("{}pkdx".format(t))
         if config['users'][channel]['lastfm']: 
             commandL.append("{}song".format(t))
             if user == channel or config['users'][user]['status'] == 'admin':
                 commandL.append("{}lastfm".format(t))
         for command in config['users'][channel]['custom']['commands'].keys(): commandL.append(command)
-        if user==channel or config['users'][user]['status'] == 'admin' or not bot.getUserMode(channel, user).is_regular()  :commandL.extend("{}add {}disable {}modules".format(t,t,t).split(' '))
+        if user==channel or config['users'][user]['status'] == 'admin' or not bot.getUserMode(channel, user).is_regular()  :commandL.extend("{}enable {}disable {}modules".format(t,t,t).split(' '))
         if user == channel or config['users'][user]['status'] == 'admin': commandL.append("{}part".format(t))
         commandL.extend(config['users'][user]['pcommands'].keys())
         commandL = list(set(commandL))
         bot.say(channel,"Your available commands in this channel are: {}".format(', '.join(commandL)))
 
     def executeModules(self, bot, user, channel, message):
-        bot.say(channel,"Available modules are: dogs, dogfacts, multi, linkinfo, speedrun, utility, faq, lastfm, novelty, and quote.")
+        bot.say(channel,"Available modules are: dogs, dogfacts, multi, linkinfo, speedrun, utility, faq, lastfm, novelty, pokedex, and quote.")
 
     def executeHelp(self, bot, user, channel, message):
         t = config['users'][channel]['trigger']
@@ -661,7 +665,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeAbout(self, bot, user, channel, message):
         t = config['users'][channel]['trigger']
-        bot.say(channel, "I'm a bot made by powderedmilk_ or something, use {}help for more info. If you can't figure something out, feel free to tweet @powderedmilk_ for help. [Bot Last Updated: October 18th, 2015]".format(t))
+        bot.say(channel, "I'm a bot made by powderedmilk_ or something, use {}help for more info or go here: http://powderedmilk.github.io/wooferedmilk If you can't figure something out, feel free to tweet @powderedmilk_ for help. [Bot Last Updated: November 18th, 2015]".format(t))
 
     def executeUptime(self, bot, user, channel, message):
         if not config['users'][channel]['utility']: return
@@ -745,6 +749,7 @@ class WooferBotCommandHandler(Sensitive):
         ('{}part', 'executePart', False),
         ('{}add', 'executeAdd', False),
         ('{}disable', 'executeDisable', False),
+        ('{}enable','executeAdd',False),
         ('{}pb', 'executePb', True),
         ('{}wr', 'executeWr', True),
         ('{}dogs', 'executeDogs', False),
@@ -781,6 +786,8 @@ class WooferBotCommandHandler(Sensitive):
         ('{}8ball','executeEightBall',False),
         ('{}title','executeTitle',True),
         ('{}pkmninfo','getPokemonData', True),
+        ('{}pkdx','getPokemonData',True),
+        ('{}pokedex','getPokemonData',True),
         ('{}emotes','getEmotes', False)
     ]
 

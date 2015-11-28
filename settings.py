@@ -65,6 +65,7 @@ class WooferConfig(dict):
                 if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
                 if 'faq' not in config['users'][c].keys(): config['users'][c]['faq'] = {}
                 if 'quotes' not in config['users'][c].keys(): config['users'][c]['quotes'] = {}
+                if 'count' not in config['users'][c]['quotes'].keys(): config['users'][c]['quotes']['count'] = len(config['users'][c]['quotes'].keys())
                 if 'lastfma' not in config['users'][c].keys(): config['users'][c]['lastfma'] = ""
                 if 'added by' not in config['users'][c].keys(): config['users'][c]['added by'] = "N/A"
                 if 'time added' not in config['users'][c].keys(): config['users'][c]['time added'] = "N/A"
