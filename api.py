@@ -34,7 +34,7 @@ def getSRCNAData(game, f, runner):
     return json.load(response)
 
 def getSRCNFData(game, f, runner):
-    if f == "wr": url = "http://www.speedrun.com/api/v1/games?name={}".format(game)
+    if f == "wr": url = "http://www.speedrun.com/api/v1/games?name={}&max=1".format(game)
     response = urllib.urlopen(url)
     return json.load(response)
 

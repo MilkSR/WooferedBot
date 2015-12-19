@@ -58,8 +58,9 @@ class WooferConfig(dict):
                 if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
                 if 'custom' not in config['users'][c].keys():
                     config['users'][c]['custom'] = {}
-                    config['users'][c]['custom']['commands'] = {}
-                    config['users'][c]['custom']['emotes'] = {}
+                for x in ['commands','emotes','phrases']:
+                    if x not in config['users'][c]['custom'].keys():
+                        config['users'][c]['custom'][x] = {}
                 if 'trigger' not in config['users'][c].keys(): config['users'][c]['trigger'] = '+'
                 if 'mods' not in config['users'][c].keys(): config['users'][c]['mods'] = []
                 if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
@@ -72,6 +73,9 @@ class WooferConfig(dict):
                 if 'cooldowns' not in config['users'][c].keys() or type(config['users'][c]['cooldowns']) == "list": config['users'][c]['cooldowns'] = {}
                 for co in config['commands'].keys():
                     if co not in config['users'][c]['cooldowns'].keys(): config['users'][c]['cooldowns'][co] = 1
+                if 'mods' in config['users'][c].keys(): del config['users'][c]['mods']
+            if config['users'][c]['status'] == "chatter" and len(config['users'][c]['pcommands'].keys()) == 0: 
+                del config['users'][c]
 
         # init dogcount dicts
         dogsc = self.setdefault('dogsc',{})

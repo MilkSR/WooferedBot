@@ -5,7 +5,6 @@ from irc import WooferBotFactory
 import handler
 import api
 import tweepy
-import auto
 from twisted.internet import reactor, threads
 from twisted.python.rebuild import rebuild
 from settings import config
