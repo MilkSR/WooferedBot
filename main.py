@@ -15,38 +15,41 @@ bots = []
 def keyboard_handler():
     print 'Hi, keyboard input here plz'
     while True:
-        cmd = raw_input()
-        if cmd == 'q': break
-        elif cmd == ' ':
-            command = raw_input("What do you want to do?:")
-            if command.lower() == "join":
-                newChannel = raw_input("Which channel do you want to join?:")
+        try:
+            cmd = raw_input()
+            if cmd == 'q': break
+            elif cmd == ' ':
+                command = raw_input("What do you want to do?:")
+                if command.lower() == "join":
+                    newChannel = raw_input("Which channel do you want to join?:")
 
-                if newChannel in config['channels']:
-                    print 'We\'re already in channel #{}'.format(newChannel)
-                else:
-                    # add to last bot, or create new bot if none exist yet
-                    if len(bots) > 0:
-                        (bot, tcp) = bots[-1]
+                    if newChannel in config['channels']:
+                        print 'We\'re already in channel #{}'.format(newChannel)
                     else:
-                        bot = WooferBotFactory([newChannel])
-                        tcp = reactor.connectTCP("irc.twitch.tv", 6667, bot)
-                        bots.append((bot, tcp))
-                    bot.addChannel(newChannel)
+                        # add to last bot, or create new bot if none exist yet
+                        if len(bots) > 0:
+                            (bot, tcp) = bots[-1]
+                        else:
+                            bot = WooferBotFactory([newChannel])
+                            tcp = reactor.connectTCP("irc.twitch.tv", 6667, bot)
+                            bots.append((bot, tcp))
+                        bot.addChannel(newChannel)
 
-            elif command.lower() == "chat":
-                channel = raw_input("Where do you want to chat?:")
-                # find bot associated to channel
-                try:
-                    bot = next(bot for (bot,tcp) in bots if channel in bot.channels)
-                    msg = raw_input("What do you want to say?:")
-                    bot.irc.say(channel, msg)
-                except StopIteration:
-                    print 'I don\'t know that channel'
+                elif command.lower() == "chat":
+                    channel = raw_input("Where do you want to chat?:")
+                    # find bot associated to channel
+                    try:
+                        bot = next(bot for (bot,tcp) in bots if channel in bot.channels)
+                        msg = raw_input("What do you want to say?:")
+                        bot.irc.say(channel, msg)
+                    except StopIteration:
+                        print 'I don\'t know that channel'
 
-            elif command.lower() == "reload":
-                rebuild(handler)
-                rebuild(api)
+                elif command.lower() == "reload":
+                    rebuild(handler)
+                    rebuild(api)
+        except Exception,e:
+            print e
 
     print 'done'
 

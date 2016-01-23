@@ -51,6 +51,7 @@ class WooferConfig(dict):
                 config['users'][c]['status'] = "user"
         for c in config['users'].keys():
             if 'pcommands' not in config['users'][c].keys(): config['users'][c]['pcommands'] = {}
+            if 'nick' not in config['users'][c].keys(): config['users'][c]['nick'] = None
             if config['users'][c]['status'] != "chatter":
                 for i in ['dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','butts','novelty','pokedex','butt']:
                     if i not in config['users'][c].keys(): config['users'][c][i] = False
@@ -70,11 +71,11 @@ class WooferConfig(dict):
                 if 'lastfma' not in config['users'][c].keys(): config['users'][c]['lastfma'] = ""
                 if 'added by' not in config['users'][c].keys(): config['users'][c]['added by'] = "N/A"
                 if 'time added' not in config['users'][c].keys(): config['users'][c]['time added'] = "N/A"
-                if 'cooldowns' not in config['users'][c].keys() or type(config['users'][c]['cooldowns']) == "list": config['users'][c]['cooldowns'] = {}
-                for co in config['commands'].keys():
-                    if co not in config['users'][c]['cooldowns'].keys(): config['users'][c]['cooldowns'][co] = 1
+                if 'cooldowns' in config['users'][c].keys(): del config['users'][c]['cooldowns']
+                if 'bannedwords' not in config['users'][c].keys(): config['users'][c]['bannedwords'] = {}
+                if 'count' in config['users'][c]['quotes'].keys(): del config['users'][c]['quotes']['count']
                 if 'mods' in config['users'][c].keys(): del config['users'][c]['mods']
-            if config['users'][c]['status'] == "chatter" and len(config['users'][c]['pcommands'].keys()) == 0: 
+            if config['users'][c]['status'] == "chatter" and (len(config['users'][c]['pcommands'].keys()) == 0 and config['users'][c]['nick'] == None): 
                 del config['users'][c]
 
         # init dogcount dicts

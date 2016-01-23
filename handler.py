@@ -46,6 +46,7 @@ FFZ_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?frankerfacez\.com/emoticons/
 #Make modules command show which are active
 #Make it so people are only added to the config if they have personal commands
 #Proper nickname system
+#Fix quote count
 #--------------------------------------
 
 class WooferBotCommandHandler(Sensitive):
@@ -62,6 +63,7 @@ class WooferBotCommandHandler(Sensitive):
             self.handleSpeedrun(bot, user, channel, message)
             self.handleTwitter(bot, user, channel, message)
             self.handleFFZ(bot, user, channel, message)
+            self.updateBans(bot, user, channel, message)
             if user not in config['users'][channel]['ignore'] and user not in config['globalignorelist']:
                 self.updateDogs(bot, channel, message)
                 self.updateCustom(bot, user, channel, message)
@@ -109,6 +111,15 @@ class WooferBotCommandHandler(Sensitive):
                     config['users'][channel]['custom']['emotes'][emote] = 0
         return
 
+    def updateBans(self, bot, user, channel, message):
+        if len(config['users'][channel]['bannedwords']) == 0: return
+        for i in config['users'][channel]['bannedwords'].keys():
+            if i in message:
+                if config['users'][channel]['bannedwords'][i] == "ban":
+                    bot.say(channel,"/ban {}".format(user))
+                elif type(config['users'][channel]['bannedwords'][i]) == 'int':
+                    bot.say(channel,"/timeout {} {}".format(user,config['users'][channel]['bannedwords'][i]))
+
     # def updateLog(self, bot, channel, message):
         # if channel not in config['logging']: return
         # [channel]['log'].append(time.strftime("[%H:%M:%S]") + ' <' + user + '> ' + message)
@@ -150,7 +161,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeFFZ(self, bot, user, channel, id):
         data = api.getFFZEmoteData(id)
-        if user in config['usernicks']: user = config['usernicks'][user]
+        if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
         bot.say(channel,"{} linked: {} by {}".format(user,data['emote']['name'],data['emote']['owner']['display_name']))
 
     def executeTwitter(self, bot, user, channel, id):
@@ -159,7 +170,7 @@ class WooferBotCommandHandler(Sensitive):
         bot.say(channel,"[{}:@{}] tweeted: {}".format(data['user']['name'].encode('utf8'),data['user']['screen_name'].encode('utf8'),post))
 
     def executeSRCRun(self, bot, user, channel, run_id):
-        if user in config['usernicks']: user = config['usernicks'][user]
+        if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
         data = api.getSRCRun(run_id)
         if data['data']['players']['data'][0]['rel'] == 'user': runner = data['data']['players']['data'][0]['names']['international']
         elif data['data']['players']['data'][0]['rel'] == 'guest': runner = data['data']['players']['data'][0]['name']
@@ -431,7 +442,7 @@ class WooferBotCommandHandler(Sensitive):
         data = api.getYouTubeData(video_id)
         title = data['items'][0]['snippet']['title']
         videoPoster = data['items'][0]['snippet']['channelTitle']
-        if user in config['usernicks']: user = config['usernicks'][user]
+        if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
         bot.say(channel,'{} linked: {} by {}'.format(user, title.encode('utf8'), videoPoster.encode('utf8')))
 
     def executeSet(self, bot, user, channel, message):
@@ -473,42 +484,45 @@ class WooferBotCommandHandler(Sensitive):
             fact = random.choice(dogFacts).strip()
             dog1 = random.choice(config['dogs'])
             dog2 = random.choice(config['dogs'])
-            if user in config['usernicks']: user = config['usernicks'][user]
+            if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
             bot.say(channel, "{}: {} {} {}\r\n".format(user, dog1, fact, dog2))
 
     def executeCustom(self, bot, user, channel, message):
         if user != channel and bot.getUserMode(channel, user).is_regular() and not config['users'][user]['status'] == 'admin': return
-        if message.split(' ')[1] == 'emote':
+        if message.split(' ')[1].lower() == 'emote':
             emotes = message.split(' ')[2:]
             for emote in emotes: config['users'][channel]['custom']['emotes'][emote] = 0
             bot.say(channel, '{} added to emote list'.format(' '.join(emotes)))
-        elif message.split(' ')[1] == 'command':
+        elif message.split(' ')[1].lower() == 'command':
             command = message.split(' ')[2]
             response = message.split(' ',3)[3]
             config['users'][channel]['custom']['commands'][command] = response
             bot.say(channel, '{} added to this channel\'s custom commands.'.format(command))
-        elif message.split(' ')[1] == 'quote' and config['users'][channel]['quote']:
-            qid = config['users'][channel]['quotes']['count']
-            config['users'][channel]['quotes']['count'] += 1
+        elif message.split(' ')[1].lower() == 'quote' and config['users'][channel]['quote']:
+            for x in xrange(0,1000):
+                if str(x) not in config['users'][channel]['quotes'].keys():
+                    qid = x
+                    break
             quote = message.split(' ',2)[2]
             config['users'][channel]['quotes'][qid] = quote
             bot.say(channel,"{} added to the this channels quote list with the id:{}".format(quote,qid))
-        elif message.split(' ')[1] == 'faq' and (user == channel or config['users'][user]['status'] == 'admin'):
+        elif message.split(' ')[1].lower() == 'faq' and (user == channel or config['users'][user]['status'] == 'admin'):
             game = api.getTwitchData(channel)['game'].encode("utf8")
             faq = message.split(' ',2)[2].encode("utf8")
             config['users'][channel]['faq'][game] = faq
             bot.say(channel,"{}'s FAQ set to {}".format(game,faq))
-        elif message.split(' ')[1] == 'global' and config['users'][user]['status'] == 'admin':
+        elif message.split(' ')[1].lower() == 'global' and config['users'][user]['status'] == 'admin':
             command = message.split(' ')[3].lower()
             cuser = message.split(' ')[2]
             if cuser not in config['users'].keys():
                 config['users'][cuser] = {}
                 config['users'][cuser]['status'] = 'chatter'
+                config['users'][cuser]['pcommands'] = {}
             response = message.split(' ',4)[4]
             config['users'][cuser]['pcommands'][command] = response
             print config['users'][cuser]['pcommands'].keys()
             bot.say(channel, "{} can now use {}!".format(cuser,command))
-        elif message.split(' ')[1] == "phrase":
+        elif message.split(' ')[1].lower() == "phrase":
             message = message.split(',',1)
             phrase = message[0].split(' ',2)[2].lower()
             reply = message[1]
@@ -613,7 +627,10 @@ class WooferBotCommandHandler(Sensitive):
     def randomQuote(self, bot, user, channel, message):
         if not config['users'][channel]['quote']: return
         if len(message.split(' ')) == 1: qid = random.choice(config['users'][channel]['quotes'].keys())
-        elif len(message.split(' ')) == 2: qid = message.split(' ')[1]
+        elif len(message.split(' ')) == 2 and message.split(' ')[1] != 'count' : qid = message.split(' ')[1]
+        elif len(message.split(' ')) == 2 and message.split(' ')[1] == 'count':
+            bot.say(channel,"Current quote count is {}".format(len(config['users'][channel]['quotes'].keys())))
+            return
         print config['users'][channel]['quotes'][qid]
         bot.say(channel, "#{}: {}".format(qid,config['users'][channel]['quotes'][str(qid)]))
 
@@ -626,9 +643,20 @@ class WooferBotCommandHandler(Sensitive):
         bot.say(channel, '{}{}'.format(config['multitwitch'][multi],'/'.join(set(mchannels))))
 
     def executeNick(self, bot, user, channel, message):
-        config['usernicks'][user] = message.split(' ',1)[1]
-        bot.say(channel,"{}'s nick set to {}.".format(user,config['usernicks'][user]))
-        config.save()
+        try:
+            if user not in config['users'].keys():
+                config['users'][user] = {}
+                config['users'][user]['status'] = 'chatter'
+                config['users'][user]['nick'] = None
+            if len(message.split(' ',1)[1]) <= 25: config['users'][user]['nick'] = message.split(' ',1)[1]
+            else:
+                bot.say(channel,"Nick too long, please be sure it's under 25 characters")
+                return
+            bot.say(channel,"{}'s nick set to {}.".format(user,config['users'][user]['nick']))
+            config.save()
+        except Exception,e:
+            print e
+            print sys.exc_traceback.tb_lineno
 
     def customFAQ(self, bot, user, channel, message):
         if not config['users'][channel]['faqm']: return
@@ -638,29 +666,33 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeCommands(self, bot, user, channel, message):
         #Could probably still clean this up a bit, but it's a lot better
-        t = config['users'][channel]['trigger']
-        commandL = []
-        if user in config['users'].keys():
-            if user == channel or config['users'][user]['status'] == 'admin': commandL.extend("{}help {}about".format(t,t).split(' '))
-        if config['users'][channel]['dogs']: commandL.extend("{}dogs {}slots".format(t,t).split(' '))
-        if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(t))
-        if config['users'][channel]['multi']: commandL.append("{}multi".format(t))
-        if config['users'][channel]['speedrun']: commandL.extend("{}wr {}pb".format(t,t).split(' '))
-        if config['users'][channel]['utility']: commandL.extend("{}uptime {}hl {}dhl {}highlights {}title".format(t,t,t,t,t).split(' '))
-        if config['users'][channel]['quote']: commandL.append("{}quote".format(t))
-        if config['users'][channel]['faqm']: commandL.append("{}faq".format(t))
-        if config['users'][channel]['novelty']: commandL.append("{}8ball".format(t))
-        if config['users'][channel]['pokedex']: commandL.append("{}pkdx".format(t))
-        if config['users'][channel]['lastfm']: 
-            commandL.append("{}song".format(t))
-            if user == channel or config['users'][user]['status'] == 'admin':
-                commandL.append("{}lastfm".format(t))
-        for command in config['users'][channel]['custom']['commands'].keys(): commandL.append(command)
-        if user==channel or config['users'][user]['status'] == 'admin' or not bot.getUserMode(channel, user).is_regular()  :commandL.extend("{}enable {}disable {}modules".format(t,t,t).split(' '))
-        if user == channel or config['users'][user]['status'] == 'admin': commandL.append("{}part".format(t))
-        commandL.extend(config['users'][user]['pcommands'].keys())
-        commandL = list(set(commandL))
-        bot.say(channel,"Your available commands in this channel are: {}".format(', '.join(commandL)))
+        try:    
+            t = config['users'][channel]['trigger']
+            commandL = []
+            if user == channel or not bot.getUserMode(channel,user).is_regular() or (user in config['users'].keys() and config['users'][user]['status'] == 'admin'): commandL.extend("{}help {}about".format(t,t).split(' '))
+            if config['users'][channel]['dogs']: commandL.extend("{}dogs".format(t,t).split(' '))
+            if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(t))
+            if config['users'][channel]['multi']: commandL.append("{}multi".format(t))
+            if config['users'][channel]['speedrun']: commandL.extend("{}wr {}pb".format(t,t).split(' '))
+            if config['users'][channel]['utility']: 
+                commandL.extend("{}uptime {}title".format(t,t).split(' '))
+                if user==channel or not bot.getUserMode(channel, user).is_regular() or (user in config['users'] and config['users'][user]['status'] == "admin"): commandL.extend("{}hl {}dhl {}highlights".format(t,t,t).split(' '))
+            if config['users'][channel]['quote']: commandL.append("{}quote".format(t))
+            if config['users'][channel]['faqm']: commandL.append("{}faq".format(t))
+            if config['users'][channel]['novelty']: commandL.append("{}8ball {}slots".format(t,t))
+            if config['users'][channel]['pokedex']: commandL.append("{}pkdx".format(t))
+            if config['users'][channel]['lastfm']: 
+                commandL.append("{}song".format(t))
+                if user == channel or (user in config['users'] and config['users'][user]['status'] == 'admin'): commandL.append("{}lastfm".format(t))
+            for command in config['users'][channel]['custom']['commands'].keys(): commandL.append(command)
+            if user==channel or (user in config['users'].keys() and config['users'][user]['status'] == 'admin') or not bot.getUserMode(channel, user).is_regular():commandL.extend("{}enable {}disable {}modules".format(t,t,t).split(' '))
+            if user == channel or (user in config['users'].keys() and config['users'][user]['status'] == 'admin'): commandL.append("{}part".format(t))
+            if user in config['users']: commandL.extend(config['users'][user]['pcommands'].keys())
+            commandL = list(set(commandL))
+            bot.say(channel,"Your available commands in this channel are: {}".format(', '.join(commandL)))
+        except Exception,e:
+            print e
+            print sys.exc_traceback.tb_lineno
 
     def executeModules(self, bot, user, channel, message):
         mod = ['dogs','dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','novelty','pokedex']
@@ -722,6 +754,26 @@ class WooferBotCommandHandler(Sensitive):
         bot.say(channel,"Highlight timestamps deleted.")
         config.save()
 
+    def voteBan(self, bot, user, channel, message):
+        try:
+            if not config['users'][channel]['voteban']: return
+            buser = message.split(' ')[1].lower()
+            if not bot.getUserMode(channel, buser).is_regular() or buser == channel: return
+            if buser not in config['users'][channel]['votebans']: config['users'][channel]['votebans'][buser] = []
+            if user not in config['users'][channel]['votebans'][buser]:
+                config['users'][channel]['votebans'][buser].append(user)
+            else: return
+            if len(config['users'][channel]['votebans'][buser]) >= 7:
+                bot.say(channel,"/timeout {}".format(buser))
+                bot.say(channel,"RIP my nigga {}. Everyone pour one out.".format(buser))
+                del(config['users'][channel]['votebans'][buser])
+            else:
+                bot.say(channel, "{} needs {} more votes to get banned for 10 minutes.".format(buser, (7 - len(config['users'][channel]['votebans'][buser]))))
+            config.save()
+        except Exception,e:
+            print e
+            print sys.exc_traceback.tb_lineno
+            
     def executeUserBase(self, bot, user, channel, message):
         if not config['users'][user]['status'] == 'admin': return
         if message.startswith('+chatters'): bot.say(channel,str(len(config['users'].keys())))
@@ -810,7 +862,9 @@ class WooferBotCommandHandler(Sensitive):
         ('{}pkmninfo','getPokemonData', True),
         ('{}pkdx','getPokemonData',True),
         ('{}pokedex','getPokemonData',True),
-        ('{}emotes','getEmotes', False)
+        ('{}emotes','getEmotes', False),
+        ('{}dance','dance',False),
+        ('{}voteban','voteBan',False)
     ]
 
 
