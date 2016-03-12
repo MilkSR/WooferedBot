@@ -5,6 +5,7 @@ import datetime
 import isodate
 import pytz
 import tweepy
+import requests
 from settings import config
 
 def getTwitchData(channel):
@@ -42,7 +43,6 @@ def getSRCRun(rid):
     url = "http://www.speedrun.com/api/v1/runs/{}?embed=category,players,game,level".format(rid)
     response = urllib.urlopen(url)
     return json.load(response)
-
 
 def getSRCNCategories(category):
     response = urllib.urlopen(category)
@@ -93,10 +93,10 @@ def getFFZEmoteData(id):
 
 def getPokedex():
     url = "http://www.pokeapi.co/api/v1/pokedex/1"
-    response = urllib.urlopen(url)
-    return json.load(response)
+    response = requests.get(url)
+    return response.json()
 
 def getPokemon(apiEnd):
     url = "http://www.pokeapi.co/{}".format(apiEnd)
-    response = urllib.urlopen(url)
-    return json.load(response)
+    response = requests.get(url)
+    return response.json()
