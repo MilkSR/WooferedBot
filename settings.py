@@ -45,6 +45,7 @@ class WooferConfig(dict):
             json.dump(coppeh, f, indent=4, sort_keys=True)
 
     def sanitize(self):
+        config['channels'].sort()
         for c in config['channels']:
             if c not in config['users'].keys():
                 config['users'][c] = {}

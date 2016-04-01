@@ -6,6 +6,7 @@ import isodate
 import pytz
 import tweepy
 import requests
+import soundcloud
 from settings import config
 
 def getTwitchData(channel):
@@ -62,6 +63,9 @@ def getSRLData():
     srlresponse = urllib.urlopen(srlurl);
     return json.load(srlresponse)
 
+def getSCData(client,trackURL):
+    return client.get('/resolve', url=trackURL)
+
 def getLiveSince(bot, user, channel):
     url = "https://api.twitch.tv/kraken/streams/" + channel
     response = urllib.urlopen(url)
@@ -73,8 +77,8 @@ def getLiveSince(bot, user, channel):
     liveSince = b - a
     return liveSince
 
-def getButt(t,l,page):
-    url = "http://safebooru.org/index.php?page=dapi&s=post&q=index&json=1&tags={}+ass+-splatoon&limit={}&pid={}".format(t,l,page)
+def getButt(page):
+    url = "https://danbooru.donmai.us/posts.json?tags=butt%20rating:safe&limit=100&page={}".format(page)
     response = urllib.urlopen(url)
     return json.load(response)
     
