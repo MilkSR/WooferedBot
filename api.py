@@ -104,3 +104,18 @@ def getPokemon(apiEnd):
     url = "http://www.pokeapi.co/{}".format(apiEnd)
     response = requests.get(url)
     return response.json()
+
+def getStrawpoll(pid):
+    url = "https://strawpoll.me/api/v2/polls/{}".format(pid)
+    response = requests.get(url)
+    return response.json()
+
+def getTwitchpoll(pid):
+    url = "http://api.twitchpoll.com/v1/poll/{}".format(pid)
+    response = requests.get(url)
+    return response.json()
+    
+def getTwitchVod(vc, vid):
+    url = "https://api.twitch.tv/kraken/videos/{}{}".format(vc, vid)
+    response = requests.get(url, headers={'ClientID': config['twitchCID']})
+    return response.json()

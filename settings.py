@@ -66,13 +66,13 @@ class WooferConfig(dict):
                 if 'trigger' not in config['users'][c].keys(): config['users'][c]['trigger'] = '+'
                 if 'mods' not in config['users'][c].keys(): config['users'][c]['mods'] = []
                 if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
+                if 'shadowbans' not in config['users'][c].keys(): config['users'][c]['shadowbans'] = []
                 if 'faq' not in config['users'][c].keys(): config['users'][c]['faq'] = {}
                 if 'quotes' not in config['users'][c].keys(): config['users'][c]['quotes'] = {}
                 if 'count' not in config['users'][c]['quotes'].keys(): config['users'][c]['quotes']['count'] = len(config['users'][c]['quotes'].keys())
                 if 'lastfma' not in config['users'][c].keys(): config['users'][c]['lastfma'] = ""
                 if 'added by' not in config['users'][c].keys(): config['users'][c]['added by'] = "N/A"
                 if 'time added' not in config['users'][c].keys(): config['users'][c]['time added'] = "N/A"
-                if 'buttss' in config['users'][c].keys(): del config['users'][c]['butts']
                 if 'bannedwords' not in config['users'][c].keys(): config['users'][c]['bannedwords'] = {}
                 if 'count' in config['users'][c]['quotes'].keys(): del config['users'][c]['quotes']['count']
                 if 'mods' in config['users'][c].keys(): del config['users'][c]['mods']
@@ -95,6 +95,12 @@ class WooferConfig(dict):
             for co in self['commands'].keys():
                 if co not in ltcu['commands'][c].keys():
                     ltcu['commands'][c][co] = 0
+
+    def checkConfig(channel, mod):
+        if config['users'][channel][mod]:
+            return true
+        if not config['users'][channel][mod]:
+            return false
 
     def defaults(self):
         # defaults

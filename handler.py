@@ -38,18 +38,16 @@ x = time.time()
 YOUTUBE_LINK = re.compile(r"""\b(?:https?://)?(?:m\.|www\.)?youtu(?:be\.com|\.be)/(?:v/|watch/|.*?(?:embed|watch).*?v=)?([a-zA-Z0-9\-_]+)""", re.IGNORECASE)
 SRC_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?speedrun\.com/run/([A-Za-z0-9]+)""", re.IGNORECASE)
 TWITTER_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?twitter\.com/(?:[A-Za-z0-9_]+)?/status/([0-9]+)""", re.IGNORECASE)
-FFZ_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?frankerfacez\.com/emoticons/(\d+)""", re.IGNORECASE)
+FFZ_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?frankerfacez\.com/emoticons?/(\d+)""", re.IGNORECASE)
 SC_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?soundcloud\.com/(\S+)/(\S+)""", re.IGNORECASE)
+SP_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?strawpoll\.me/([0-9]+)""", re.IGNORECASE)
+TP_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?twitchpoll\.com/poll/(\S+)""", re.IGNORECASE)
+TV_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?twitch\.tv/(?:[A-Za-z0-9_]+)?/(\S+)/(\S+)""", re.IGNORECASE)
 
 #-----------------TODO-----------------
 #A WORKING COMMAND/MESSAGE COOLDOWN
 #Make a good race command
 #Possible song requests
-#Leaderboards command
-#Make modules command show which are active
-#Make it so people are only added to the config if they have personal commands
-#Proper nickname system
-#Fix quote count
 #--------------------------------------
 
 class WooferBotCommandHandler(Sensitive):
@@ -59,14 +57,16 @@ class WooferBotCommandHandler(Sensitive):
         self.semaphore = Semaphore(0)
         self.commandQueue = deque()
 
-
-
     def handleMessage(self, bot, user, channel, message):
-            self.handleYoutube(bot, user, channel, message)
-            self.handleSpeedrun(bot, user, channel, message)
-            self.handleTwitter(bot, user, channel, message)
-            self.handleFFZ(bot, user, channel, message)
-            self.handleSoundCloud(bot, user, channel, message)
+            if config['users'][channel]['linkinfo']:
+                self.handleYoutube(bot, user, channel, message)
+                self.handleSpeedrun(bot, user, channel, message)
+                self.handleTwitter(bot, user, channel, message)
+                self.handleFFZ(bot, user, channel, message)
+                self.handleSoundCloud(bot, user, channel, message)
+                self.handleStrawpoll(bot, user, channel, message)
+                self.handleTwitchpoll(bot, user, channel, message)
+                self.handleTwitchVod(bot, user, channel, message)
             self.updateBans(bot, user, channel, message)
             if user not in config['users'][channel]['ignore'] and user not in config['globalignorelist']:
                 self.updateDogs(bot, channel, message)
@@ -92,7 +92,6 @@ class WooferBotCommandHandler(Sensitive):
             if dog in message and config['users'][channel]['dogs']:
                 config['dogsc']['dogCount'][channel][dog] += 1
                 if config['dogsc']['dogCount'][channel][dog] == 3:
-                    # say dog name in channel
                     bot.say(channel, dog)
                     config['dogsc']['dogCount'][channel][dog] = 0
 
@@ -105,7 +104,7 @@ class WooferBotCommandHandler(Sensitive):
             if message.lower().startswith(command.lower()): 
                 bot.say(channel, config['users'][channel]['custom']['commands'][command])
         for phrase in config['users'][channel]['custom']['phrases'].keys():
-            if phrase in message.lower():
+            if phrase.lower() in message.lower():
                 bot.say(channel,"{}".format(config['users'][channel]['custom']['phrases'][phrase]))
         for emote in config['users'][channel]['custom']['emotes'].keys():
             if emote in message:
@@ -116,20 +115,21 @@ class WooferBotCommandHandler(Sensitive):
         return
 
     def updateBans(self, bot, user, channel, message):
-        if len(config['users'][channel]['bannedwords']) == 0: return
+        if len(config['users'][channel]['bannedwords']) == 0 and len(config['users'][channel]['shadowbans']) == 0: return
         for i in config['users'][channel]['bannedwords'].keys():
             if i in message:
                 if config['users'][channel]['bannedwords'][i] == "ban":
                     bot.say(channel,"/ban {}".format(user))
                 elif type(config['users'][channel]['bannedwords'][i]) == 'int':
                     bot.say(channel,"/timeout {} {}".format(user,config['users'][channel]['bannedwords'][i]))
+        if user in config['users'][channel]['shadowbans']:
+            bot.say(channel, "/timeout {} 1".format(user))
 
     # def updateLog(self, bot, channel, message):
         # if channel not in config['logging']: return
         # [channel]['log'].append(time.strftime("[%H:%M:%S]") + ' <' + user + '> ' + message)
 
     def handleYoutube(self, bot, user, channel, message):
-        if not config['users'][channel]['linkinfo']: return
         match = YOUTUBE_LINK.search(message)
         if not match:
             return
@@ -146,24 +146,42 @@ class WooferBotCommandHandler(Sensitive):
         self.semaphore.release()
 
     def handleTwitter(self, bot, user, channel, message):
-            if not config['users'][channel]['linkinfo']: return
             match = TWITTER_LINK.search(message)
             if not match:
                 return
-
+            print 'hi'
             self.commandQueue.append(('executeTwitter', bot, user, channel, match.group(1)))
             self.semaphore.release()
 
     def handleSoundCloud(self, bot, user, channel, message):  
-        if not config['users'][channel]['linkinfo']: return
         match = SC_LINK.search(message)
         if not match:
             return
         self.commandQueue.append(('executeSoundCloud', bot, user, channel, (match.group(1), match.group(2))))
         self.semaphore.release()
 
+    def handleTwitchVod(self, bot, user, channel, message):  
+        match = TV_LINK.search(message)
+        if not match:
+            return
+        self.commandQueue.append(('executeTwitchVod', bot, user, channel, (match.group(1), match.group(2))))
+        self.semaphore.release()
+
+    def handleStrawpoll(self, bot, user, channel, message):  
+        match = SP_LINK.search(message)
+        if not match:
+            return
+        self.commandQueue.append(('executeStrawpoll', bot, user, channel, match.group(1)))
+        self.semaphore.release()
+
+    def handleTwitchpoll(self, bot, user, channel, message):  
+        match = TP_LINK.search(message)
+        if not match:
+            return
+        self.commandQueue.append(('executeTwitchpoll', bot, user, channel, match.group(1)))
+        self.semaphore.release()
+
     def handleFFZ(self, bot, user, channel, message):
-        if not config['users'][channel]['linkinfo']: return
         match = FFZ_LINK.search(message)
         if not match:
             return
@@ -171,6 +189,22 @@ class WooferBotCommandHandler(Sensitive):
         self.commandQueue.append(('executeFFZ', bot, user, channel, match.group(1)))
         self.semaphore.release()
 
+    def executeStrawpoll(self, bot, user, channel, pid):
+        data = api.getStrawpoll(pid)
+        if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
+        answers = []
+        for a in range (0,len(data['options'])):
+            answers.append("{}:{}".format(data['options'][a],data['votes'][a]))
+        bot.say(channel,"{} linked a poll: {} | {}".format(user, data['title'],', '.join(answers)))
+        
+    def executeTwitchpoll(self, bot, user, channel, pid):
+        data = api.getTwitchpoll(pid)
+        if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
+        answers = []
+        for a in data['votes']:
+            answers.append("{}:{}".format(a['option'],a['votes']))
+        bot.say(channel,"{} linked a poll: {} | {}".format(user, data['title'],', '.join(answers)))
+    
     def executeFFZ(self, bot, user, channel, id):
         data = api.getFFZEmoteData(id)
         if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
@@ -208,6 +242,20 @@ class WooferBotCommandHandler(Sensitive):
         elif float(x[0]) != 0:
             pbDec = str(x[0])
             bot.say(channel, "{} linked: {} {} in {}{} by {}".format(user, game, category, timeString, pbDec[1:], runner))
+
+    def executeTwitchVod(self, bot, user, channel, video_stuff):
+        data = api.getTwitchVod(video_stuff[0], video_stuff[1])
+        if 'error' not in data.keys():
+            vchannel = data['channel']['display_name']
+            vtitle = data['title']
+            vgame = data['game']
+            vtype = data['broadcast_type']
+            if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
+            bot.say(channel, "{} linked: {}'s {}: {} playing {}".format(user, vchannel, vtype, vtitle, vgame))
+            return
+        else: 
+            bot.say(channel, "VoD not found.")
+            return
 
     def executeSoundCloud(self, bot, user, channel, user_song): 
         trackURL = 'http://soundcloud.com/{}/{}'.format(user_song[0],user_song[1])
@@ -326,20 +374,37 @@ class WooferBotCommandHandler(Sensitive):
                 config['users'][channel]['ignore'].remove(message.split(' ')[1].lower())
                 bot.say(channel,"{} removed to this channel's ignore list.".format(message.split(' ')[1]))
                 config.save()
-
+                
+    def executeLB(self, bot, user, channel, message):
+        if not config['users'][channel]['speedrun']: return
+        if len(message.split(' ')) == 1: game = api.getTwitchData(channel)['game'].encode("utf8")
+        else: game = ' '.join(message.split(' ',1)[1:])
+        data = api.getSRCNAData(game,"wr","")
+        if len(data['data']) < 1: data = api.getSRCNFData(game, "wr","")
+        while len(data['data']) < 1:
+            if type(game) == str: game = game.split(' ')
+            game.remove(game[len(game)-1])
+            if len(game) < 1:
+                break
+            game = ' '.join(game)
+            data = api.getSRCNAData(game,"wr","")
+        weblink = str(data['data'][0]['weblink'])
+        game = str(data['data'][0]['names']['international'].encode('utf-8'))
+        bot.say(channel, "The leaderboard for {} is {}".format(game, weblink))
+        
     def executePb(self, bot, user, channel, message):
         if not config['users'][channel]['speedrun']: return
         try:
             cat = "x"
             category = "y"
             x = [0,0]
+            idData = []
             if len(message.split(' ')) >= 2:
-                runner = message.split(' ')[1]
-                idData = api.getSRCIDData("pb","lookup=" + runner)
-                uid = idData['data'][0]['id']
-                runner = idData['data'][0]['names']['international']
-            else:
-                idData = api.getSRCIDData("pb", "twitch=" + channel)
+                lu = ["lookup","name", "twitch"]
+                for look in lu:
+                    runner = message.split(' ')[1]
+                    idData = api.getSRCIDData("pb", look + '=' + runner)
+                    if idData['data'] != []: break
                 uid = idData['data'][0]['id']
                 runner = idData['data'][0]['names']['international']
             if len(message.split(' ')) <= 2: game = api.getTwitchData(channel)['game']
@@ -348,7 +413,10 @@ class WooferBotCommandHandler(Sensitive):
             if gdata['data'] == []: gdata = api.getSRCNFData(game, "wr","")
             game = gdata['data'][0]['id']
             data = api.getSRCUData(uid,game)['data']
-            categoryData = api.getSRCNCategories(gdata['data'][0]['links'][4]['uri'])
+            for l in gdata['data'][0]['links']:
+                if l['rel'] == "categories":
+                    link = l['uri'] + "?embed=category,players,variables&top=1"
+            categoryData = api.getSRCNCategories(link)
             if len(message.split(' ')) <= 3:
                 twitchData = api.getTwitchData(channel)
                 for cat in categoryData['data']:
@@ -357,11 +425,27 @@ class WooferBotCommandHandler(Sensitive):
                         cat = category
                         break
             elif len(message.split(' ')) >= 4: category = message.split(' ',3)[3]
+            categoryFound = None
+            maybeCatss = []
+            maybeCatsh = []
             for d in data:
-                if d['category']['data']['name'].lower() == category.lower():
-                    category = d['category']['data']['name']
-                    run = d
-                    break
+                if category.lower() in d['category']['data']['name'].lower():
+                    if d['category']['data']['name'].startswith(category.lower()):
+                        maybeCatss.append(data.index(d))
+                    else:
+                        maybeCatsh.append(data.index(d))
+                    if category.lower() == d['category']['data']['name'].lower():
+                        categoryFound = "found"
+                        category = d['category']['data']['name']
+                        run = d
+                        break
+            if categoryFound == None and (len(maybeCatss) > 0 or len(maybeCatsh) > 0):
+                if len(maybeCatss) > 0:
+                    category = data[maybeCatss[0]]['category']['data']['name']
+                    run = data[maybeCatss[0]]
+                else:
+                    category = data[maybeCatsh[0]]['category']['data']['name']
+                    run = data[maybeCatsh[0]]
             if category == "y":
                 run = data[0]
                 category = run['category']['data']['name']
@@ -379,10 +463,10 @@ class WooferBotCommandHandler(Sensitive):
             if pbTime == 0 and float(x[0]) == 0:
                 bot.say(channel, "The specified category doesn't exist")
             elif pbTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "{}'s personal record in {} {} is {} | Run Page: {}".format(runner, game, category, timeString, page))
+                bot.say(channel, "{}'s personal record in {}, {} is {} | Run Page: {}".format(runner, game, category, timeString, page))
             elif float(x[0]) != 0:
                 pbDec = str(x[0])
-                bot.say(channel, "{}'s personal record in {} {} is {}{} | Run Page: {}".format(runner, game, category, timeString, pbDec[1:], page))
+                bot.say(channel, "{}'s personal record in {}, {} is {}{} | Run Page: {}".format(runner, game, category, timeString, pbDec[1:], page))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
@@ -416,14 +500,16 @@ class WooferBotCommandHandler(Sensitive):
                     bot.say(channel,"Game could not be found.")
                     return
                 data = api.getSRCNFData(game, "wr","")
-            if len(game) > 1 and type(game) == list:
+            if type(game) == list:
                 igame = ' '.join(game)
             elif type(game) == str: 
                 igame = game
             game = data['data'][0]['names']['international']
-            categoryData = api.getSRCNCategories(data['data'][0]['links'][4]['uri'])
+            for l in data['data'][0]['links']:
+                if l['rel'] == "categories":
+                    link = l['uri'] + "?embed=category,players,variables&top=1"
+            categoryData = api.getSRCNCategories(link)
             if len(message.split(' ')) <= 2 or message.split(' ',1)[1] == igame:
-                print 'there probably wasn\'t a category given'
                 twitchData = api.getTwitchData(channel)
                 for cat in categoryData['data']:
                     if cat['name'].lower() in twitchData['status'].lower():
@@ -432,24 +518,54 @@ class WooferBotCommandHandler(Sensitive):
                         category = max(possibleCategories,key=len)
                         cat = category
                 if category != cat:
-                    link = data['data'][0]['links'][8]['uri'] + "?embed=category,players,variables&top=1"
+                    for l in data['data'][0]['links']:
+                        if l['rel'] == "leaderboard":
+                            link = l['uri'] + "?embed=category,players,variables&top=1"
                 else:
-                    link = data['data'][0]['links'][4]['uri']
+                    for l in data['data'][0]['links']:
+                        if l['rel'] == "categories":
+                            link = l['uri'] + "?embed=category,players,variables&top=1"
                     cData = api.getSRCNCategories(link)
                     for c in cData['data']:
-                        if c['type'] == "per-game" and c['name'].lower() == category.lower(): link = c['links'][5]['uri'] + "?embed=category,players,variables&top=1"
+                        if c['type'] == "per-game" and c['name'].lower() == category.lower():
+                            for l in c['links']:
+                                print l['rel']
+                                if l['rel'] == 'leaderboard':
+                                    link = l['uri'] + "?embed=category,players&top=1"
             else:
                 message = message.lower().split(' ')
-                message.remove('+wr')
+                mstart = "{}wr".format(config['users'][channel]['trigger'])
+                message.remove(mstart)
                 for g in igame.split(' '):
                     message.remove(g.lower())
                 category = ' '.join(message)
-                link = data['data'][0]['links'][4]['uri']
+                for l in data['data'][0]['links']:
+                    if l['rel'] == "categories":
+                        link = l['uri'] + "?embed=category,players,variables&top=1"
                 cData = api.getSRCNCategories(link)
+                categoryFound = None
+                maybeCatss = []
+                maybeCatsh = []
                 for c in cData['data']:
-                    if c['type'] == "per-game" and c['name'].lower() == category.lower():
-                        link = c['links'][5]['uri']  + "?embed=category,players&top=1"
-                        break
+                    if c['type'] == "per-game" and category.lower() in c['name'].lower():
+                        if c['name'].lower().startswith(category.lower()):
+                            maybeCatss.append(cData['data'].index(c))
+                        else:
+                            maybeCatsh.append(cData['data'].index(c))
+                        if c['name'].lower() == category.lower():
+                            categoryFound = "found"
+                            for l in c['links']:
+                                if l['rel'] == 'leaderboard':
+                                    link = l['uri'] + "?embed=category,players&top=1"
+                            break
+                if categoryFound == None:
+                    if len(maybeCatss) > 0:
+                        maybeCats = maybeCatss
+                    else:
+                        maybeCats = maybeCatsh
+                    for l in cData['data'][maybeCats[0]]['links']:
+                            if l['rel'] == 'leaderboard':
+                                link = l['uri'] + "?embed=category,players&top=1"
             lbdata = api.getSRCNLeaderboard(link)
             category = lbdata['data']['category']['data']['name']
             wrTime = lbdata['data']['runs'][0]['run']['times']['primary_t']
@@ -471,10 +587,10 @@ class WooferBotCommandHandler(Sensitive):
             if wrTime == 0 and float(x[0]) == 0:
                 bot.say(channel, "The specified category doesn't exist")
             elif wrTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "The world record in {} {} is {} by {} | Run Page: {}{}".format(game.encode('utf8'), category, timeString, runner, page, rtime))
+                bot.say(channel, "The world record in {}, {} is {} by {} | Run Page: {}{}".format(game.encode('utf8'), category, timeString, runner, page, rtime))
             elif float(x[0]) != 0:
                 wrDec = str(x[0])
-                bot.say(channel, "The world record in {} {} is {}{} by {} | Run Page: {}{}".format(game.encode('utf8'), category, timeString, wrDec[1:], runner, page, rtime))
+                bot.say(channel, "The world record in {}, {} is {}{} by {} | Run Page: {}{}".format(game.encode('utf8'), category, timeString, wrDec[1:], runner, page, rtime))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
@@ -503,17 +619,6 @@ class WooferBotCommandHandler(Sensitive):
 #        except Exception,e:
 #            print e
 #            print sys.exc_traceback.tb_lineno
-
-    def lowerDict(self,d):
-        e = {}
-        for k, v in d.iteritems():
-            if isinstance(v, dict):
-                e[k.lower()] = self.lowerDict(v)
-            elif isinstance(v, str):
-                e[k.lower()] = v.lower()
-            else:
-                e[k.lower()] = v
-        return e
 
     def executeYoutube(self, bot, user, channel, video_id):
         data = api.getYouTubeData(video_id)
@@ -545,12 +650,18 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeSlots(self, bot, user, channel, message):
         if not config['users'][channel]['novelty']: return
+        slist = []
+        if channel == "thmcs" or channel == "gnisten6": 
+            #if not config['users'][channel]['cooldowns']['length'] < time.time() - config['users'][channel]['cooldowns']['lastused']: return
+            #config['users'][channel]['cooldowns']['lastused'] = time.time()
+            slist = ["RaccAttack", "RaccAttux", "OMGCoon", "LilC", "KappAttack"]
+        else: slist = config['dogs']
         if user != "powderedmilk_":
-            d1 = random.choice(config['dogs'])
-            d2 = random.choice(config['dogs'])
-            d3 = random.choice(config['dogs'])
+            d1 = random.choice(slist)
+            d2 = random.choice(slist)
+            d3 = random.choice(slist)
         else:
-            d1 = random.choice(config['dogs'])
+            d1 = random.choice(slist)
             d2 = d1
             d3 = d2
         bot.say(channel,"{} {} {}".format(d1,d2,d3))
@@ -588,7 +699,7 @@ class WooferBotCommandHandler(Sensitive):
                 qid = message.split(' ')[2]
                 length = 3
             else:
-                for x in xrange(0,1000):
+                for x in xrange(0,5000):
                     if str(x) not in config['users'][channel]['quotes'].keys():
                         qid = x
                         length = 2
@@ -622,6 +733,11 @@ class WooferBotCommandHandler(Sensitive):
         config.load()
         print 'config saved'
         return
+
+    def shadowban(self, bot, user, channel, message):
+        if user != channel and not config['users'][user]['status'] == 'admin': return
+        if message.split(' ')[1] not in config['users'][channel]['shadowbans']: config['users'][channel]['shadowbans'].append(message.split(' ')[1])
+        else: config['users'][channel]['shadowbans'].remove(message.split(' ')[1])
 
     def setLastfmAccount(self, bot, user, channel, message):
         if user != channel and not config['users'][user]['status'] == 'admin': return
@@ -752,7 +868,6 @@ class WooferBotCommandHandler(Sensitive):
         else: bot.say(channel,"{} doesn't have a set FAQ in this channel, type {}new faq FAQ-link to set it for this game".format(game, config['users'][channel]['trigger']))
 
     def executeCommands(self, bot, user, channel, message):
-        #Could probably still clean this up a bit, but it's a lot better
         try:    
             t = config['users'][channel]['trigger']
             commandL = []
@@ -760,7 +875,7 @@ class WooferBotCommandHandler(Sensitive):
             if config['users'][channel]['dogs']: commandL.extend("{}dogs".format(t,t).split(' '))
             if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(t))
             if config['users'][channel]['multi']: commandL.append("{}multi".format(t))
-            if config['users'][channel]['speedrun']: commandL.extend("{}wr {}pb".format(t,t).split(' '))
+            if config['users'][channel]['speedrun']: commandL.extend("{}wr {}pb {}lb".format(t,t,t).split(' '))
             if config['users'][channel]['utility']: 
                 commandL.extend("{}uptime {}title".format(t,t).split(' '))
                 if user==channel or not bot.getUserMode(channel, user).is_regular() or (user in config['users'] and config['users'][user]['status'] == "admin"): commandL.extend("{}hl {}dhl {}highlights".format(t,t,t).split(' '))
@@ -773,7 +888,7 @@ class WooferBotCommandHandler(Sensitive):
                 if user == channel or (user in config['users'] and config['users'][user]['status'] == 'admin'): commandL.append("{}lastfm".format(t))
             for command in config['users'][channel]['custom']['commands'].keys(): commandL.append(command)
             if user==channel or (user in config['users'].keys() and config['users'][user]['status'] == 'admin') or not bot.getUserMode(channel, user).is_regular():commandL.extend("{}enable {}disable {}modules".format(t,t,t).split(' '))
-            if user == channel or (user in config['users'].keys() and config['users'][user]['status'] == 'admin'): commandL.append("{}part".format(t))
+            if user == channel or (user in config['users'].keys() and config['users'][user]['status'] == 'admin'): commandL.extend("{}part {}shadowban".format(t,t).split(' '))
             if user in config['users']: commandL.extend(config['users'][user]['pcommands'].keys())
             commandL = list(set(commandL))
             bot.say(channel,"Your available commands in this channel are: {}".format(', '.join(commandL)))
@@ -806,7 +921,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeAbout(self, bot, user, channel, message):
         t = config['users'][channel]['trigger']
-        bot.say(channel, "I'm a bot made by powderedmilk_ or something, use {}help for more info or go here: milksr.tk/wooferedmilk If you can't figure something out, feel free to tweet @powderedmilk_ for help. [Bot Last Updated: March 14th, 2016]".format(t))
+        bot.say(channel, "I'm a bot made by powderedmilk_ or something, use {}help for more info or go here: milk.dog/wooferedmilk If you can't figure something out, feel free to tweet @powderedmilk_ for help. [Bot Last Updated: May 26th, 2016]".format(t))
 
     def executeUptime(self, bot, user, channel, message):
         if not config['users'][channel]['utility']: return
@@ -954,7 +1069,10 @@ class WooferBotCommandHandler(Sensitive):
         ('{}dance','dance',False),
         ('{}voteban','voteBan',False),
         ('{}dag','dag',False),
-        ('{}ignorelist','getIgnored',False)
+        ('{}ignorelist','getIgnored',False),
+        ('{}lb', 'executeLB', True),
+        ('{}leaderboard', 'executeLB', True),
+        ('{}shadowban', 'shadowban', False)
     ]
 
 
