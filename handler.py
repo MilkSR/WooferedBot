@@ -400,11 +400,16 @@ class WooferBotCommandHandler(Sensitive):
             x = [0,0]
             idData = []
             if len(message.split(' ')) >= 2:
+                runner = message.split(' ')[1]
                 lu = ["lookup","name", "twitch"]
                 for look in lu:
-                    runner = message.split(' ')[1]
                     idData = api.getSRCIDData("pb", look + '=' + runner)
                     if idData['data'] != []: break
+                uid = idData['data'][0]['id']
+                runner = idData['data'][0]['names']['international']
+            else:
+                runner = channel
+                idData = api.getSRCIDData("pb", 'twitch=' + runner)
                 uid = idData['data'][0]['id']
                 runner = idData['data'][0]['names']['international']
             if len(message.split(' ')) <= 2: game = api.getTwitchData(channel)['game']
