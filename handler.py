@@ -149,7 +149,6 @@ class WooferBotCommandHandler(Sensitive):
             match = TWITTER_LINK.search(message)
             if not match:
                 return
-            print 'hi'
             self.commandQueue.append(('executeTwitter', bot, user, channel, match.group(1)))
             self.semaphore.release()
 
@@ -999,6 +998,10 @@ class WooferBotCommandHandler(Sensitive):
         elif user == channel or not bot.getUserMode(channel, user).is_regular():
             bot,say(channel,"{} are ignored in this channel. {} are globally ignored".format(', '.join(config['users'][channel]['ignore'])))
 
+    def executeSay(self, bot, user, channel, message):
+        if not config['users'][user]['status'] == 'admin': return
+        bot.say(channel,message.split(' ',1)[1])
+
     def start(self):
         reactor.callInThread(self.loop)
 
@@ -1077,7 +1080,8 @@ class WooferBotCommandHandler(Sensitive):
         ('{}ignorelist','getIgnored',False),
         ('{}lb', 'executeLB', True),
         ('{}leaderboard', 'executeLB', True),
-        ('{}shadowban', 'shadowban', False)
+        ('{}shadowban', 'shadowban', False),
+        ('~say', 'executeSay', False)
     ]
 
 
