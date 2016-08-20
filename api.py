@@ -17,41 +17,41 @@ def getTwitchData(channel):
 def getSRCData(game,f,runner):
     if f == "wr": url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8')
     elif f == "pb": url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8') + "&user=" + runner
-    response = urllib.urlopen(url)
-    return json.load(response)
+    response = requests.get(url)
+    return response.json()
 
 def getSRCIDData(f, runner):
     if f == "pb": url = "http://www.speedrun.com/api/v1/users?{}".format(runner)
-    response = urllib.urlopen(url)
-    return json.load(response)
+    response = requests.get(url)
+    return response.json()
 
 def getSRCUData(uid,game):
     url = "http://www.speedrun.com/api/v1/users/{}/personal-bests?embed=game,category&game={}".format(uid,game)
-    response = urllib.urlopen(url)
-    return json.load(response)
+    response = requests.get(url)
+    return response.json()
 
 def getSRCNAData(game, f, runner):
     if f == "wr": url = "http://www.speedrun.com/api/v1/games?abbreviation={}".format(game)
-    response = urllib.urlopen(url)
-    return json.load(response)
+    response = requests.get(url)
+    return response.json()
 
 def getSRCNFData(game, f, runner):
     if f == "wr": url = "http://www.speedrun.com/api/v1/games?name={}&max=1".format(game)
-    response = urllib.urlopen(url)
-    return json.load(response)
+    response = requests.get(url)
+    return response.json()
 
 def getSRCRun(rid):
     url = "http://www.speedrun.com/api/v1/runs/{}?embed=category,players,game,level".format(rid)
-    response = urllib.urlopen(url)
-    return json.load(response)
+    response = requests.get(url)
+    return response.json()
 
 def getSRCNCategories(category):
-    response = urllib.urlopen(category)
-    return json.load(response)
+    response = requests.get(category)
+    return response.json()
 
 def getSRCNLeaderboard(link):
-    response = urllib.urlopen(link)
-    return json.load(response)
+    response = requests.get(link)
+    return response.json()
 
 def getYouTubeData(video_id):
     url = "https://www.googleapis.com/youtube/v3/videos?part=snippet%2CcontentDetails%2Cstatistics&id={}&fields=items(id%2Csnippet(title%2CchannelTitle)%2CcontentDetails(duration)%2Cstatistics(viewCount%2ClikeCount%2CdislikeCount))&key={}".format(video_id, config["YTAuthKey"])
@@ -79,8 +79,8 @@ def getLiveSince(bot, user, channel):
 
 def getButt(page):
     url = "https://danbooru.donmai.us/posts.json?tags=butt%20rating:safe&limit=100&page={}".format(page)
-    response = urllib.urlopen(url)
-    return json.load(response)
+    response = requests.get(url)
+    return response.json()
     
 def getLastfmData(user):
     url = "https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user={}&api_key=57ee3318536b23ee81d6b27e36997cde&format=json".format(user)
@@ -117,5 +117,10 @@ def getTwitchpoll(pid):
     
 def getTwitchVod(vc, vid):
     url = "https://api.twitch.tv/kraken/videos/{}{}".format(vc, vid)
+    response = requests.get(url, headers={'ClientID': config['twitchCID']})
+    return response.json()
+
+def getTwitchClip(c,clip):
+    url = "https://clips.twitch.tv/api/v1/clips/{}/{}".format(c, clip)
     response = requests.get(url, headers={'ClientID': config['twitchCID']})
     return response.json()

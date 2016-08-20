@@ -43,6 +43,7 @@ SC_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?soundcloud\.com/(\S+)/(\S+)""
 SP_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?strawpoll\.me/([0-9]+)""", re.IGNORECASE)
 TP_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?twitchpoll\.com/poll/(\S+)""", re.IGNORECASE)
 TV_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?twitch\.tv/(?:[A-Za-z0-9_]+)?/(\S+)/(\S+)""", re.IGNORECASE)
+CLIP_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?clips\.twitch\.tv/(\S+)/(\S+)""", re.IGNORECASE)
 
 #-----------------TODO-----------------
 #A WORKING COMMAND/MESSAGE COOLDOWN
@@ -67,6 +68,7 @@ class WooferBotCommandHandler(Sensitive):
                 self.handleStrawpoll(bot, user, channel, message)
                 self.handleTwitchpoll(bot, user, channel, message)
                 self.handleTwitchVod(bot, user, channel, message)
+                self.handleTwitchClip(bot, user, channel, message)
             self.updateBans(bot, user, channel, message)
             if user not in config['users'][channel]['ignore'] and user not in config['globalignorelist']:
                 self.updateDogs(bot, channel, message)
@@ -166,6 +168,13 @@ class WooferBotCommandHandler(Sensitive):
         self.commandQueue.append(('executeTwitchVod', bot, user, channel, (match.group(1), match.group(2))))
         self.semaphore.release()
 
+    def handleTwitchClip(self, bot, user, channel, message):
+        match = CLIP_LINK.search(message)
+        if not match:
+            return
+        self.commandQueue.append(('executeTwitchClip', bot, user, channel, (match.group(1), match.group(2))))
+        self.semaphore.release()
+
     def handleStrawpoll(self, bot, user, channel, message):  
         match = SP_LINK.search(message)
         if not match:
@@ -184,7 +193,6 @@ class WooferBotCommandHandler(Sensitive):
         match = FFZ_LINK.search(message)
         if not match:
             return
-
         self.commandQueue.append(('executeFFZ', bot, user, channel, match.group(1)))
         self.semaphore.release()
 
@@ -250,10 +258,23 @@ class WooferBotCommandHandler(Sensitive):
             vgame = data['game']
             vtype = data['broadcast_type']
             if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
-            bot.say(channel, "{} linked: {}'s {}: {} playing {}".format(user, vchannel, vtype, vtitle, vgame))
+            bot.say(channel, "{} linked: {}'s {}: {} playing {}".format(user, vchannel.encode("utf-8"), vtype.encode("utf-8"), vtitle.encode("utf-8"), vgame.encode("utf-8")))
             return
         else: 
             bot.say(channel, "VoD not found.")
+            return
+
+    def executeTwitchClip(self, bot, user, channel, clip_stuff):
+        data = api.getTwitchClip(clip_stuff[0], clip_stuff[1])
+        if 'message' not in data.keys():
+            ccurator = data['curator_display_name']
+            cgame = data['game'].encode("utf-8")
+            cchannel = data['broadcaster_display_name']
+            if user in config['users'].keys() and config['users'][user]['nick'] != None : user = config['users'][user]['nick']
+            bot.say(channel, "{} linked a clip by {}: {} playing {}".format(user, ccurator, cchannel, cgame))
+            return
+        else: 
+            bot.say(channel, "Clip not found.")
             return
 
     def executeSoundCloud(self, bot, user, channel, user_song): 
@@ -800,7 +821,7 @@ class WooferBotCommandHandler(Sensitive):
         if len(config['users'][channel]['custom']['emotes'].keys()) <= 0: return
         bot.say(channel, "{}".format(" , ".join(config['users'][channel]['custom']['emotes'].keys())))
 
-    def randomButt(self, bot, user, channel, message):
+    def randomButt(self, bot, user, channel, message):  
         if not config['users'][channel]['butt']: return
         tags = random.choice(['panties','bike_shorts'])
         page = random.randint(1,362)
