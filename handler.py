@@ -411,7 +411,25 @@ class WooferBotCommandHandler(Sensitive):
         weblink = str(data['data'][0]['weblink'])
         game = str(data['data'][0]['names']['international'].encode('utf-8'))
         bot.say(channel, "The leaderboard for {} is {}".format(game, weblink))
-        
+      
+    def executeSRCP(self, bot, user, channel, message):
+        if not config['users'][channel]['speedrun']: return
+        try:
+            if len(message.split(' ')) < 2:
+                tUser = channel
+            else:
+                tUser = message.split(' ',1)[1]
+            idData = api.getSRCIDData("pb","twitch={}".format(tUser))
+            if len(idData['data']) == 0:
+                bot.say(channel, "User not found.")
+                return
+            runner = idData['data'][0]['names']['international']
+            bot.say(channel, "speedrun.com/{}".format(runner.lower()))
+        except Exception, e:
+            bot.say(channel, "Error handling request")
+            print e
+            print sys.exc_traceback.tb_lineno
+
     def executePb(self, bot, user, channel, message):
         if not config['users'][channel]['speedrun']: return
         try:
@@ -710,16 +728,20 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeCustom(self, bot, user, channel, message):
         if user != channel and bot.getUserMode(channel, user).is_regular() and not config['users'][user]['status'] == 'admin': return
-        if message.split(' ')[1].lower() == 'emote':
+        action = message.split(' ')[1].lower()
+        if action == 'emote':
             emotes = message.split(' ')[2:]
             for emote in emotes: config['users'][channel]['custom']['emotes'][emote] = 0
             bot.say(channel, '{} added to emote list'.format(' '.join(emotes)))
-        elif message.split(' ')[1].lower() == 'command':
+        elif action == 'command':
+            if message.split(' ')[3].lower().startswith("/w") or message.split(' ')[3].lower().startswith(".w"):
+                bot.say(channel, "No bueno, my dude.")
+                return
             command = message.split(' ')[2]
             response = message.split(' ',3)[3]
             config['users'][channel]['custom']['commands'][command] = response
             bot.say(channel, '{} added to this channel\'s custom commands.'.format(command))
-        elif message.split(' ')[1].lower() == 'quote' and config['users'][channel]['quote']:
+        elif action == 'quote' and config['users'][channel]['quote']:
             if not message.split(' ')[2].startswith('"'): 
                 qid = message.split(' ')[2]
                 length = 3
@@ -732,12 +754,12 @@ class WooferBotCommandHandler(Sensitive):
             quote = message.split(' ',length)[length]
             config['users'][channel]['quotes'][qid] = quote
             bot.say(channel,"{} added to the this channels quote list with the id:{}".format(quote,qid))
-        elif message.split(' ')[1].lower() == 'faq' and (user == channel or config['users'][user]['status'] == 'admin'):
+        elif action == 'faq' and (user == channel or config['users'][user]['status'] == 'admin'):
             game = api.getTwitchData(channel)['game'].encode("utf8")
             faq = message.split(' ',2)[2].encode("utf8")
             config['users'][channel]['faq'][game] = faq
             bot.say(channel,"{}'s FAQ set to {}".format(game,faq))
-        elif message.split(' ')[1].lower() == 'global' and config['users'][user]['status'] == 'admin':
+        elif action == 'global' and config['users'][user]['status'] == 'admin':
             command = message.split(' ')[3].lower()
             cuser = message.split(' ')[2]
             if cuser not in config['users'].keys():
@@ -746,9 +768,8 @@ class WooferBotCommandHandler(Sensitive):
                 config['users'][cuser]['pcommands'] = {}
             response = message.split(' ',4)[4]
             config['users'][cuser]['pcommands'][command] = response
-            print config['users'][cuser]['pcommands'].keys()
             bot.say(channel, "{} can now use {}!".format(cuser,command))
-        elif message.split(' ')[1].lower() == "phrase":
+        elif action == "phrase":
             message = message.split(',',1)
             phrase = message[0].split(' ',2)[2].lower()
             reply = message[1]
@@ -900,7 +921,7 @@ class WooferBotCommandHandler(Sensitive):
             if config['users'][channel]['dogs']: commandL.extend("{}dogs".format(t,t).split(' '))
             if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(t))
             if config['users'][channel]['multi']: commandL.append("{}multi".format(t))
-            if config['users'][channel]['speedrun']: commandL.extend("{}wr {}pb {}lb".format(t,t,t).split(' '))
+            if config['users'][channel]['speedrun']: commandL.extend("{}wr {}pb {}lb {}src".format(t,t,t).split(' '))
             if config['users'][channel]['utility']: 
                 commandL.extend("{}uptime {}title".format(t,t).split(' '))
                 if user==channel or not bot.getUserMode(channel, user).is_regular() or (user in config['users'] and config['users'][user]['status'] == "admin"): commandL.extend("{}hl {}dhl {}highlights".format(t,t,t).split(' '))
@@ -1102,7 +1123,8 @@ class WooferBotCommandHandler(Sensitive):
         ('{}lb', 'executeLB', True),
         ('{}leaderboard', 'executeLB', True),
         ('{}shadowban', 'shadowban', False),
-        ('~say', 'executeSay', False)
+        ('~say', 'executeSay', False),
+        ('{}src', 'executeSRCP', True)
     ]
 
 

@@ -11,8 +11,8 @@ from settings import config
 
 def getTwitchData(channel):
     twitchUrl = "https://api.twitch.tv/kraken/channels/" + channel
-    twitchResponse = urllib.urlopen(twitchUrl);
-    return json.load(twitchResponse)
+    twitchResponse = requests.get(twitchUrl, headers={'Client-ID': config['twitchCID']})
+    return twitchResponse.json()
 
 def getSRCData(game,f,runner):
     if f == "wr": url = "http://www.speedrun.com/api_records.php?game=" + game.encode('utf8')
@@ -117,10 +117,10 @@ def getTwitchpoll(pid):
     
 def getTwitchVod(vc, vid):
     url = "https://api.twitch.tv/kraken/videos/{}{}".format(vc, vid)
-    response = requests.get(url, headers={'ClientID': config['twitchCID']})
+    response = requests.get(url, headers={'Client-ID': config['twitchCID']})
     return response.json()
 
 def getTwitchClip(c,clip):
     url = "https://clips.twitch.tv/api/v1/clips/{}/{}".format(c, clip)
-    response = requests.get(url, headers={'ClientID': config['twitchCID']})
+    response = requests.get(url, headers={'Client-ID': config['twitchCID']})
     return response.json()
