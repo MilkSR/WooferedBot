@@ -423,8 +423,8 @@ class WooferBotCommandHandler(Sensitive):
             if len(idData['data']) == 0:
                 bot.say(channel, "User not found.")
                 return
-            runner = idData['data'][0]['names']['international']
-            bot.say(channel, "speedrun.com/{}".format(runner.lower()))
+            srcLink = idData['data'][0]['weblink']
+            bot.say(channel, "{}".format(srcLink.split('www.')[1]))
         except Exception, e:
             bot.say(channel, "Error handling request")
             print e
