@@ -305,7 +305,7 @@ class WooferBotCommandHandler(Sensitive):
             joinChannel = parts[1]
         else:
             return # invalid syntax
-
+        if "#" in joinChannel: joinChannel = joinChannel.replace("#","")
         if joinChannel in config['channels']:
             bot.say(channel, '{} is already in channel #{}!'.format(config['nickname'], joinChannel))
         else:
@@ -331,8 +331,9 @@ class WooferBotCommandHandler(Sensitive):
                 newcmd = []
                 notcmd = []
                 activecmd = []
+                whisp = ""
                 cmd.extend(message.lower().split(' ')[1:])
-                lookup = ['dogs','dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','novelty','pokedex']
+                lookup = ['dogs','dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','novelty','pokedex','whisper']
                 if config['users'][user]['status'] == 'admin': lookup.append('butt')
                 for i in cmd:
                     if i == 'faq': i = 'faqm'
@@ -352,7 +353,8 @@ class WooferBotCommandHandler(Sensitive):
                 if len(activecmd) == 0: activecmds = ""
                 elif len(activecmd) > 1: activecmds = "{} modules were already active.".format(', '.join(activecmd))
                 else: activecmds = "{} module was already active.".format(', '.join(activecmd))
-                bot.say(channel,"{} {} {}".format(cmds,notcmds,activecmds))
+                if 'whisper' in cmds: whisp = "{}commands will now be whispered to user.".format(config['users'][channel]['trigger'])
+                bot.say(channel,"{} {} {} {}".format(whisp,cmds,notcmds,activecmds))
                 config.save()
         except Exception,e:
             print e
@@ -362,7 +364,7 @@ class WooferBotCommandHandler(Sensitive):
         if user == channel or not bot.getUserMode(channel, user).is_regular()  or config['users'][user]['status'] == 'admin':
             cmd = message.lower().split(' ')[1]
             if cmd == 'faq': cmd = 'faqm'
-            lookup = ['dogs','dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','novelty','pokedex']
+            lookup = ['dogs','dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','novelty','pokedex','whisper']
             if config['users'][channel]['butt']: lookup.append('butt')
             if (cmd not in lookup):
                 bot.say(channel, 'I don\'t know \'{}\', choose from {}'.format(cmd, ', '.join(lookup)))
@@ -392,7 +394,7 @@ class WooferBotCommandHandler(Sensitive):
                 config.save()
             else:
                 config['users'][channel]['ignore'].remove(message.split(' ')[1].lower())
-                bot.say(channel,"{} removed to this channel's ignore list.".format(message.split(' ')[1]))
+                bot.say(channel,"{} removed from this channel's ignore list.".format(message.split(' ')[1]))
                 config.save()
                 
     def executeLB(self, bot, user, channel, message):
@@ -639,29 +641,29 @@ class WooferBotCommandHandler(Sensitive):
             print e
             print sys.exc_traceback.tb_lineno
 
-#    def executeRace(self, bot, user, channel, message):
-#        if not config['users'][channel]['speedrun']: return
-#        try:
-#            splitmessage = message.split(' ')
-#            if len(splitmessage) == 1: splitmessage.append('kadgar')
-#            if len(splitmessage) >= 3: fracer = splitmessage[2]
-#            else: fracer = channel
-#            srldata = api.getSRLData()
-#            for x in xrange(0,len(srldata['races'])):
-#                srlracers = []
-#                for k,v in srldata['races'][x]['entrants'].iteritems():
-#                    if splitmessage[1] == 'srl' and fracer in srldata['races'][x]['entrants'][k]['twitch']:
-#                        bot.say(channel, 'http://www.speedrunslive.com/race/?id={}'.format(srldata['races'][x]['id']))
-#                        return
-#                    if len(srldata['races'][x]['entrants'][k]['twitch']) != 0:
-#                        twitchData = api.getTwitchData(srldata['races'][x]['entrants'][k]['twitch'].lower())
-#                        if twitchData['stream'] is not None: srlracers.append(srldata['races'][x]['entrants'][k]['twitch'].lower())
-#                if fracer in srlracers:
-#                    break
-#            if fracer in srlracers and splitmessage[1] in config['multitwitch'].keys(): bot.say(channel, config['multitwitch'][splitmessage[1]] + '{}'.format('/'.join(srlracers)))
-#        except Exception,e:
-#            print e
-#            print sys.exc_traceback.tb_lineno
+    def executeRace(self, bot, user, channel, message):
+        if not config['users'][channel]['speedrun']: return
+        try:
+            splitmessage = message.split(' ')
+            if len(splitmessage) == 1: splitmessage.append('kadgar')
+            if len(splitmessage) >= 3: fracer = splitmessage[2]
+            else: fracer = channel
+            srldata = api.getSRLData()
+            for x in xrange(0,len(srldata['races'])):
+                srlracers = []
+                for k,v in srldata['races'][x]['entrants'].iteritems():
+                    if splitmessage[1] == 'srl' and fracer in srldata['races'][x]['entrants'][k]['twitch']:
+                        bot.say(channel, 'http://www.speedrunslive.com/race/?id={}'.format(srldata['races'][x]['id']))
+                        return
+                    if len(srldata['races'][x]['entrants'][k]['twitch']) != 0:
+                        twitchData = api.getTwitchData(srldata['races'][x]['entrants'][k]['twitch'].lower())
+                        if twitchData['stream'] is not None: srlracers.append(srldata['races'][x]['entrants'][k]['twitch'].lower())
+                if fracer in srlracers:
+                    break
+            if fracer in srlracers and splitmessage[1] in config['multitwitch'].keys(): bot.say(channel, config['multitwitch'][splitmessage[1]] + '{}'.format('/'.join(srlracers)))
+        except Exception,e:
+            print e
+            print sys.exc_traceback.tb_lineno
 
     def executeYoutube(self, bot, user, channel, video_id):
         data = api.getYouTubeData(video_id)
@@ -698,8 +700,14 @@ class WooferBotCommandHandler(Sensitive):
             #if not config['users'][channel]['cooldowns']['length'] < time.time() - config['users'][channel]['cooldowns']['lastused']: return
             #config['users'][channel]['cooldowns']['lastused'] = time.time()
             slist = ["RaccAttack", "RaccAttux", "OMGCoon", "LilC", "KappAttack"]
+        elif channel == "thextera_":
+            rlist = ["RayFROTD", "RayFaceNoSpace", "Rayangry", "FeelsRayMan", "RayHiccup", "raymanDark", "raymanHappy", "raymanHuh", "raymanRage", "RayNon", "RayRIP", "RayScared", "RayTheman"]
+            for x in xrange(0,5):
+                ray = random.choice(rlist)
+                slist.append(ray)
+                rlist.remove(ray)
         else: slist = config['dogs']
-        if user != "powderedmilk_":
+        if user != "powderedmilk_" and (user != "flashyniqua" or "BCWarrior" not in message):
             d1 = random.choice(slist)
             d2 = random.choice(slist)
             d3 = random.choice(slist)
@@ -710,7 +718,6 @@ class WooferBotCommandHandler(Sensitive):
         bot.say(channel,"{} {} {}".format(d1,d2,d3))
         time.sleep(1.5)
         if d1 == d2 and d2 == d3: bot.say(channel,"Jackpot {}".format(d1))
-
     def executeEightBall(self, bot, user, channel, message):
         if not config['users'][channel]['novelty']: return
         bot.say(channel,random.choice(config['8ball']))
@@ -809,30 +816,38 @@ class WooferBotCommandHandler(Sensitive):
     def getPokemonData(self, bot, user, channel, message):
         if not config['users'][channel]['pokedex']: return
         try:
+            print 'hi' 
             pokemon = message.split(' ',1)[1].lower()
             data = api.getPokedex()
-            for i in data['pokemon']:
-                if i['name'] == pokemon:
-                    apiEnd = i['resource_uri']
+            for i in data['pokemon_entries']:
+                if i['pokemon_species']['name'] == pokemon:
+                    apiEnd = i['pokemon_species']['url']
                     break
-            pkmnData = api.getPokemon(apiEnd)
-            name = pkmnData['name']
-            if name == "Mr-mime": name = "Mr. Mime"
-            elif name == "Mime-jr": name = "Mime Jr."
-            natID = pkmnData['national_id']
-            species = ', the {} Pokémon'.format(config['pkmnspecies'][name])
-            hp = pkmnData['hp']
-            a  = pkmnData['attack']
-            d = pkmnData['defense']
-            sa = pkmnData['sp_atk']
-            sd = pkmnData['sp_def']
-            s = pkmnData['speed']
+            pkmnData1 = api.getPokemon(apiEnd)
+            apiEnd = "http://www.pokeapi.co/api/v2/pokemon/{}/".format(pkmnData1['id'])
+            pkmnData2 = api.getPokemon(apiEnd)
+            name = pkmnData1['names'][0]['name']
+            natID = pkmnData1['pokedex_numbers'][-1]['entry_number']
+            if name in config['pkmnspecies']: 
+                species = ', the {} Pokémon'.format(config['pkmnspecies'][name])
+            else:
+                species = ""
+            stats = {}
+            for i in pkmnData2['stats']:
+                stats[i['stat']['name']] = i['base_stat']
+            hp = stats['hp']
+            a  = stats['attack']
+            d = stats['defense']
+            sa = stats['special-attack']
+            sd = stats['special-defense']
+            s = stats['speed']
+            egl = []
             types = []
-            for t in pkmnData['types']:
-                types.append(t['name'])
-            if len(types) > 1: types = "Types: {}".format(", ".join(types)).title()
-            elif len(types) == 1: types = "Type: {}".format(types[0].title())
-            bot.say(channel,"Pokémon #{}:{}{} | HP:{}, Atk:{}, Def:{}, Sp. Atk:{}, Sp. Def:{}, Spe:{} | {}".format(natID, name, species, hp, a, d, sa, sd, s, types))
+            for t in pkmnData2['types']:
+                types.append(t['type']['name'].title())
+            if len(types) > 1: types = "{}".format(", ".join(types))
+            elif len(types) == 1: types = "{}".format(types[0])
+            bot.say(channel,"Pokémon #{}:{}{} | {} Type | HP:{}, Atk:{}, Def:{}, Sp. Atk:{}, Sp. Def:{}, Spe:{}".format(natID, name, species, types, hp, a, d, sa, sd, s))
         except Exception,e:
             print e
             bot.say(channel,"Error finding Pokémon. Make sure you spelled the Pokémon's name correctly. If it has a space in the name (ex:Mr. Mime) use Mr-Mime.")
@@ -910,18 +925,19 @@ class WooferBotCommandHandler(Sensitive):
     def customFAQ(self, bot, user, channel, message):
         if not config['users'][channel]['faqm']: return
         game = api.getTwitchData(channel)['game'].encode("utf8")
-        if game in config['users'][channel]['faq'].keys(): bot.say(channel,"The FAQ for {} is {}".format(game,config['users'][channel]['faq'][game]))
+        if game in config['users'][channel]['faq'].keys(): bot.say(channel,"FAQ for {}: {}".format(game,config['users'][channel]['faq'][game]))
         else: bot.say(channel,"{} doesn't have a set FAQ in this channel, type {}new faq FAQ-link to set it for this game".format(game, config['users'][channel]['trigger']))
 
     def executeCommands(self, bot, user, channel, message):
         try:    
+            beginning = ""
             t = config['users'][channel]['trigger']
             commandL = []
             if user == channel or not bot.getUserMode(channel,user).is_regular() or (user in config['users'].keys() and config['users'][user]['status'] == 'admin'): commandL.extend("{}help {}about".format(t,t).split(' '))
             if config['users'][channel]['dogs']: commandL.extend("{}dogs".format(t,t).split(' '))
             if config['users'][channel]['dogfacts']: commandL.append("{}dogfacts".format(t))
             if config['users'][channel]['multi']: commandL.append("{}multi".format(t))
-            if config['users'][channel]['speedrun']: commandL.extend("{}wr {}pb {}lb {}src".format(t,t,t).split(' '))
+            if config['users'][channel]['speedrun']: commandL.extend("{}wr {}pb {}lb {}src".format(t,t,t,t).split(' '))
             if config['users'][channel]['utility']: 
                 commandL.extend("{}uptime {}title".format(t,t).split(' '))
                 if user==channel or not bot.getUserMode(channel, user).is_regular() or (user in config['users'] and config['users'][user]['status'] == "admin"): commandL.extend("{}hl {}dhl {}highlights".format(t,t,t).split(' '))
@@ -937,13 +953,19 @@ class WooferBotCommandHandler(Sensitive):
             if user == channel or (user in config['users'].keys() and config['users'][user]['status'] == 'admin'): commandL.extend("{}part {}shadowban".format(t,t).split(' '))
             if user in config['users']: commandL.extend(config['users'][user]['pcommands'].keys())
             commandL = list(set(commandL))
-            bot.say(channel,"Your available commands in this channel are: {}".format(', '.join(commandL)))
+            if config['users'][channel]['whisper']:
+                    beginning = "/w {}".format(user)
+            if user == channel:
+                reply = "{} Your available commands in your channel are: {}".format(beginning, ', '.join(commandL))
+            else:
+                reply = "{} Your available commands in {}'s channel are: {}".format(beginning, channel, ', '.join(commandL))
+            bot.say(channel, reply)
         except Exception,e:
             print e
             print sys.exc_traceback.tb_lineno
 
     def executeModules(self, bot, user, channel, message):
-        mod = ['dogs','dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','novelty','pokedex']
+        mod = ['dogs','dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','novelty','pokedex','whisper']
         mod2 = []
         for x in mod:
             if config['users'][channel][x]: 
@@ -959,7 +981,7 @@ class WooferBotCommandHandler(Sensitive):
         if user != channel and channel != config['nickname'] and not config['users'][user]['status'] == 'admin' and bot.getUserMode(channel, user).is_regular(): return
         parts = message.split(' ')
         if len(parts) == 2 and t in parts[1]: parts[1] = parts[1][1:]
-        if len(parts) == 1: bot.say(channel,"This command is used to explain commands, for an explanation of a command do {}help <command> (without the brackets). Example: {}help commands - If you can't figure something out, feel free to tweet @powderedmilk_ for help. ".format(t,t,t,t))
+        if len(parts) == 1: bot.say(channel,"This command is used to explain commands, for an explanation of a command do {}help <command> (without the brackets). Example: {}help commands - If you can't figure something out, feel free to tweet @srlMilk for help. ".format(t,t,t,t))
         elif len(parts) == 2 and parts[1] in config['commands'].keys(): bot.say(channel,config['commands'][parts[1]].format(t))
         elif len(parts) == 2 and parts[1] in config['users'][channel]['custom']['commands'].keys() or "{}{}".format(t,parts[1]) in config['users'][channel]['custom']['commands'].keys(): bot.say(channel, "This is a custom command in this channel, to delete it type {}del command command-name".format(t))
         else: bot.say(channel, "That command isn't available or doesn't have a description, type {}commands to see available commands.".format(t))
@@ -967,7 +989,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeAbout(self, bot, user, channel, message):
         t = config['users'][channel]['trigger']
-        bot.say(channel, "I'm a bot made by powderedmilk_ or something, use {}help for more info or go here: milk.dog/wooferedmilk If you can't figure something out, feel free to tweet @powderedmilk_ for help. [Bot Last Updated: May 26th, 2016]".format(t))
+        bot.say(channel, "I'm a bot made by powderedmilk_ or something, use {}help for more info or go here: milk.dog/wooferedmilk If you can't figure something out, feel free to tweet @srlMilk for help. [Bot Last Updated: January 17th, 2017]".format(t))
 
     def executeUptime(self, bot, user, channel, message):
         if not config['users'][channel]['utility']: return
@@ -979,6 +1001,18 @@ class WooferBotCommandHandler(Sensitive):
         if not config['users'][channel]['utility']: return
         data = api.getTwitchData(channel)
         bot.say(channel,data['status'].encode('utf8'))
+
+    def executeLTime(self, bot, user, channel, message):
+        if not config['users'][channel]['utility']: return
+        if len(message.split(' ')) > 1 and user == channel:
+            z = message.split(' ',1)[1]
+            config['users'][channel]['tZone'] == z
+            bot.say(channel,"Timezone set to {}.".format(z))
+            return
+        elif len(message.split(' ')) > 1:
+            tdata = api.getTime(message.split(' ',1)[1])
+            if tdata['status'] == "OK":
+                print " "
 
     def addHighlight(self, bot, user, channel, message):
         if user == channel or not bot.getUserMode(channel, user).is_regular()  or config['users'][user]['status'] == 'admin':
@@ -1039,6 +1073,10 @@ class WooferBotCommandHandler(Sensitive):
             bot,say(channel,"{} are ignored in this channel. {} are globally ignored".format(', '.join(config['users'][channel]['ignore']), ', '.join(config['globalignorelist'])))
         elif user == channel or not bot.getUserMode(channel, user).is_regular():
             bot,say(channel,"{} are ignored in this channel. {} are globally ignored".format(', '.join(config['users'][channel]['ignore'])))
+
+    def findTrig(self, bot, user, channel, message):
+        if user in config['users'].keys() and config['users'][user]['status'] == 'admin':
+            bot.say(channel, config['users'][channel]['trigger'])
 
     def executeSay(self, bot, user, channel, message):
         if not config['users'][user]['status'] == 'admin': return
@@ -1124,7 +1162,8 @@ class WooferBotCommandHandler(Sensitive):
         ('{}leaderboard', 'executeLB', True),
         ('{}shadowban', 'shadowban', False),
         ('~say', 'executeSay', False),
-        ('{}src', 'executeSRCP', True)
+        ('{}src', 'executeSRCP', True),
+        ('~trigger', 'findTrig', False)
     ]
 
 

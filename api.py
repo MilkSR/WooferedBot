@@ -68,8 +68,8 @@ def getSCData(client,trackURL):
 
 def getLiveSince(bot, user, channel):
     url = "https://api.twitch.tv/kraken/streams/" + channel
-    response = urllib.urlopen(url)
-    data = json.load(response)
+    response = requests.get(url, headers={'Client-ID': config['twitchCID']})
+    data = response.json()
     if data['stream'] is None: return 0
     startTime = data['stream']['created_at']
     a = isodate.parse_datetime(startTime)
@@ -96,13 +96,12 @@ def getFFZEmoteData(id):
     return json.load(response)
 
 def getPokedex():
-    url = "http://www.pokeapi.co/api/v1/pokedex/1"
+    url = "http://www.pokeapi.co/api/v2/pokedex/1"
     response = requests.get(url)
     return response.json()
 
 def getPokemon(apiEnd):
-    url = "http://www.pokeapi.co/{}".format(apiEnd)
-    response = requests.get(url)
+    response = requests.get(apiEnd)
     return response.json()
 
 def getStrawpoll(pid):
@@ -123,4 +122,9 @@ def getTwitchVod(vc, vid):
 def getTwitchClip(c,clip):
     url = "https://clips.twitch.tv/api/v1/clips/{}/{}".format(c, clip)
     response = requests.get(url, headers={'Client-ID': config['twitchCID']})
+    return response.json()
+
+def getTime(zone):
+    url = "http://api.timezonedb.com/v2/list-time-zone?zone={}&fields=zoneName,timestamp&key={}&format=json".format(zone,config['timeAPIKey'])
+    response = requests.get(url)
     return response.json()

@@ -54,7 +54,7 @@ class WooferConfig(dict):
             if 'pcommands' not in config['users'][c].keys(): config['users'][c]['pcommands'] = {}
             if 'nick' not in config['users'][c].keys(): config['users'][c]['nick'] = None
             if config['users'][c]['status'] != "chatter":
-                for i in ['dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','novelty','pokedex','butt']:
+                for i in ['dogfacts','multi','speedrun','linkinfo','utility','quote','faqm','lastfm','novelty','pokedex','butt','whisper']:
                     if i not in config['users'][c].keys(): config['users'][c][i] = False
                 if 'dogs' not in config['users'][c].keys(): config['users'][c]['dogs'] = True
                 if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
@@ -75,7 +75,6 @@ class WooferConfig(dict):
                 if 'time added' not in config['users'][c].keys(): config['users'][c]['time added'] = "N/A"
                 if 'bannedwords' not in config['users'][c].keys(): config['users'][c]['bannedwords'] = {}
                 if 'count' in config['users'][c]['quotes'].keys(): del config['users'][c]['quotes']['count']
-                if 'mods' in config['users'][c].keys(): del config['users'][c]['mods']
             if config['users'][c]['status'] == "chatter" and (len(config['users'][c]['pcommands'].keys()) == 0 and config['users'][c]['nick'] == None): 
                 del config['users'][c]
 
