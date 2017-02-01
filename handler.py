@@ -89,13 +89,21 @@ class WooferBotCommandHandler(Sensitive):
                         break
 
     def updateDogs(self, bot, channel, message):
+        if not config['users'][channel]['dogs']: return
         global lastMessage
+        dim = 0
         for dog in config['dogs']:
-            if dog in message and config['users'][channel]['dogs']:
-                config['dogsc']['dogCount'][channel][dog] += 1
-                if config['dogsc']['dogCount'][channel][dog] == 3:
-                    bot.say(channel, dog)
-                    config['dogsc']['dogCount'][channel][dog] = 0
+            if dog in message:
+                dim = 1
+                break
+        if dim == 0:
+            config['dogsc']['dogCount'][channel] += 1
+        elif dim == 1: 
+            config['dogsc']['dogCount'][channel] += 5
+        print config['dogsc']['dogCount'][channel]
+        if config['dogsc']['dogCount'][channel] >= 25:
+            bot.say(channel, random.choice(config['dogs']))
+            config['dogsc']['dogCount'][channel] -= 25
 
     def updateCustom(self, bot, user, channel, message):
         if user in config['users'].keys():

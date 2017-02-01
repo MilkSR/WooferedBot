@@ -83,10 +83,7 @@ class WooferConfig(dict):
         if 'dogCount' not in dogsc: dogsc['dogCount'] = {}
         for c in self['users'].keys():
             if c not in dogsc['dogCount']:
-                dogsc['dogCount'][c] = {}
-            for d in self['dogs']:
-                if d not in dogsc['dogCount'][c]:
-                    dogsc['dogCount'][c][d] = 0
+                dogsc['dogCount'][c] = 0
         ltcu = self.setdefault('ltcu',{})
         if 'commands' not in ltcu: ltcu['commands'] = {}
         for c in self['users'].keys():
