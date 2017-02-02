@@ -100,7 +100,6 @@ class WooferBotCommandHandler(Sensitive):
             config['dogsc']['dogCount'][channel] += 1
         elif dim == 1: 
             config['dogsc']['dogCount'][channel] += 5
-        print config['dogsc']['dogCount'][channel]
         if config['dogsc']['dogCount'][channel] >= 25:
             bot.say(channel, random.choice(config['dogs']))
             config['dogsc']['dogCount'][channel] -= 25
@@ -691,10 +690,6 @@ class WooferBotCommandHandler(Sensitive):
 
     def executeDogs(self, bot, user, channel, message):
         if not config['users'][channel]['dogs']: return
-        i = random.randint(0,1000)
-        if i == 89:
-            bot.say(channel,"ChefFrank You have been visited by Chef Frank, good dog biscuits and happiness will come your way")
-            return
         bot.say(channel, ' '.join(config['dogs']))
 
     def dag(self, bot, user, channel, message):
