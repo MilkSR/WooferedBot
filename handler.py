@@ -92,6 +92,7 @@ class WooferBotCommandHandler(Sensitive):
         if not config['users'][channel]['dogs']: return
         global lastMessage
         dim = 0
+        ri = 0
         for dog in config['dogs']:
             if dog in message:
                 dim = 1
@@ -100,9 +101,10 @@ class WooferBotCommandHandler(Sensitive):
             config['dogsc']['dogCount'][channel] += 1
         elif dim == 1: 
             config['dogsc']['dogCount'][channel] += 5
-        if config['dogsc']['dogCount'][channel] >= 25:
+        ri = random.randint(25, 30)
+        if config['dogsc']['dogCount'][channel] >= ri:
             bot.say(channel, random.choice(config['dogs']))
-            config['dogsc']['dogCount'][channel] -= 25
+            config['dogsc']['dogCount'][channel] -= ri
 
     def updateCustom(self, bot, user, channel, message):
         if user in config['users'].keys():
@@ -704,7 +706,7 @@ class WooferBotCommandHandler(Sensitive):
             #config['users'][channel]['cooldowns']['lastused'] = time.time()
             slist = ["RaccAttack", "RaccAttux", "OMGCoon", "LilC", "KappAttack"]
         elif channel == "thextera_":
-            rlist = ["RayFROTD", "RayFaceNoSpace", "Rayangry", "FeelsRayMan", "RayHiccup", "raymanDark", "raymanHappy", "raymanHuh", "raymanRage", "RayNon", "RayRIP", "RayScared", "RayTheman"]
+            rlist = ["RayFROTD", "RayFaceNoSpace", "Rayangry", "FeelsRayMan", "RayHiccup", "raymanDark", "raymanHappy", "YEAH", "raymanRage", "RayNon", "RayRIP", "RayScared", "RayTheman", "SkopsGasm", "RayStoner"]
             for x in xrange(0,5):
                 ray = random.choice(rlist)
                 slist.append(ray)
