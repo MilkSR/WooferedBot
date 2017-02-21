@@ -3,3 +3,6 @@
 *.config
 main.py.lnk
 wooferbot.config.old
+wooferbot.backup
+*.rar
+run.bat

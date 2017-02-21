@@ -14,6 +14,7 @@ def byteify(input):
 
 class WooferConfig(dict):
     cfg_file = 'wooferbot.config'
+    cfg_backup = 'wooferbot.backup'
 
     def load(self):
         try:
@@ -36,12 +37,16 @@ class WooferConfig(dict):
 
         config.sanitize()
 
-    def save(self):
-        config.sanitize()
+    def save(self, **FnS):
+        if 'san' not in FnS.keys(): config.sanitize()
+        if 'file' in FnS.keys(): 
+            file = FnS['file']
+        else:
+            file = WooferConfig.cfg_file
         coppeh = self.copy()
         del coppeh['dogsc']
         del coppeh['ltcu']
-        with open(WooferConfig.cfg_file, 'w') as f:
+        with open(file, 'w') as f:
             json.dump(coppeh, f, indent=4, sort_keys=True)
 
     def sanitize(self):
@@ -75,6 +80,7 @@ class WooferConfig(dict):
                 if 'time added' not in config['users'][c].keys(): config['users'][c]['time added'] = "N/A"
                 if 'bannedwords' not in config['users'][c].keys(): config['users'][c]['bannedwords'] = {}
                 if 'count' in config['users'][c]['quotes'].keys(): del config['users'][c]['quotes']['count']
+                if 'mods' in config['users'][c].keys(): del config['users'][c]['mods']
             if config['users'][c]['status'] == "chatter" and (len(config['users'][c]['pcommands'].keys()) == 0 and config['users'][c]['nick'] == None): 
                 del config['users'][c]
 
@@ -91,6 +97,9 @@ class WooferConfig(dict):
             for co in self['commands'].keys():
                 if co not in ltcu['commands'][c].keys():
                     ltcu['commands'][c][co] = 0
+        
+        #save backup of config
+        config.save(san = 0, file = WooferConfig.cfg_backup)
 
     def checkConfig(channel, mod):
         if config['users'][channel][mod]:

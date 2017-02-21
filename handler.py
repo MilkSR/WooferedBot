@@ -101,7 +101,6 @@ class WooferBotCommandHandler(Sensitive):
             config['dogsc']['dogCount'][channel] += 1
         elif dim == 1: 
             config['dogsc']['dogCount'][channel] += 5
-        ri = random.randint(25, 30)
         if config['dogsc']['dogCount'][channel] >= ri:
             bot.say(channel, random.choice(config['dogs']))
             config['dogsc']['dogCount'][channel] -= ri
@@ -754,15 +753,11 @@ class WooferBotCommandHandler(Sensitive):
             config['users'][channel]['custom']['commands'][command] = response
             bot.say(channel, '{} added to this channel\'s custom commands.'.format(command))
         elif action == 'quote' and config['users'][channel]['quote']:
-            if not message.split(' ')[2].startswith('"'): 
-                qid = message.split(' ')[2]
-                length = 3
-            else:
-                for x in xrange(0,5000):
-                    if str(x) not in config['users'][channel]['quotes'].keys():
-                        qid = x
-                        length = 2
-                        break
+            for x in xrange(0,5000):
+                if str(x) not in config['users'][channel]['quotes'].keys():
+                    qid = x
+                    length = 2
+                    break
             quote = message.split(' ',length)[length]
             config['users'][channel]['quotes'][qid] = quote
             bot.say(channel,"{} added to the this channels quote list with the id:{}".format(quote,qid))
@@ -1093,7 +1088,7 @@ class WooferBotCommandHandler(Sensitive):
     def saveConfig(self, bot, user, channel, message):
         if config['users'][user]['status'] == 'admin':
             config.save()
-            bot.say(channel,"Config file saved and sanitized")
+            bot.say(channel,"The streets have been sweeped FrankerZ")
 
     def stop(self):
         self.die = True
