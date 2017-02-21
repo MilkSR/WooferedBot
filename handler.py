@@ -101,10 +101,12 @@ class WooferBotCommandHandler(Sensitive):
             config['dogsc']['dogCount'][channel] += 1
         elif dim == 1: 
             config['dogsc']['dogCount'][channel] += 5
-        ri = random.randint(30, 40)
-        if config['dogsc']['dogCount'][channel] >= ri:
-            bot.say(channel, random.choice(config['dogs']))
-            config['dogsc']['dogCount'][channel] -= ri
+        if config['dogsc']['dogCount'][channel] >= 65: config['dogsc']['dogCount'][channel] = 64
+        if config['dogsc']['dogCount'][channel] >= 30:
+            ri = random.randint(config['dogsc']['dogCount'][channel], 65)
+            if config['dogsc']['dogCount'][channel] >= ri:
+                bot.say(channel, random.choice(config['dogs']))
+                config['dogsc']['dogCount'][channel] -= ri
 
     def updateCustom(self, bot, user, channel, message):
         if user in config['users'].keys():
