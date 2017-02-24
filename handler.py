@@ -89,11 +89,14 @@ class WooferBotCommandHandler(Sensitive):
                         break
 
     def updateDogs(self, bot, channel, message):
-        if not config['users'][channel]['dogs']: return
+        if not config['users'][channel]['dogs'] and len(config['users'][channel]['custom']['emotes']['list']) < 1: return
         global lastMessage
         dim = 0
         ri = 0
-        for dog in config['dogs']:
+        dogList = []
+        if config['users'][channel]['dogs']: dogList.extend(config['dogs'])
+        dogList.extend(config['users'][channel]['custom']['emotes']['list'])
+        for dog in dogList:
             if dog in message:
                 dim = 1
                 break
@@ -105,7 +108,7 @@ class WooferBotCommandHandler(Sensitive):
         if config['dogsc']['dogCount'][channel] >= 30:
             ri = random.randint(config['dogsc']['dogCount'][channel], 65)
             if config['dogsc']['dogCount'][channel] >= ri:
-                bot.say(channel, random.choice(config['dogs']))
+                bot.say(channel, random.choice(dogList))
                 config['dogsc']['dogCount'][channel] -= ri
 
     def updateCustom(self, bot, user, channel, message):
@@ -119,12 +122,6 @@ class WooferBotCommandHandler(Sensitive):
         for phrase in config['users'][channel]['custom']['phrases'].keys():
             if phrase.lower() in message.lower():
                 bot.say(channel,"{}".format(config['users'][channel]['custom']['phrases'][phrase]))
-        for emote in config['users'][channel]['custom']['emotes'].keys():
-            if emote in message:
-                config['users'][channel]['custom']['emotes'][emote] += 1
-                if config['users'][channel]['custom']['emotes'][emote]  == 3:
-                    bot.say(channel, emote)
-                    config['users'][channel]['custom']['emotes'][emote] = 0
         return
 
     def updateBans(self, bot, user, channel, message):
@@ -745,7 +742,8 @@ class WooferBotCommandHandler(Sensitive):
         action = message.split(' ')[1].lower()
         if action == 'emote':
             emotes = message.split(' ')[2:]
-            for emote in emotes: config['users'][channel]['custom']['emotes'][emote] = 0
+            for emote in emotes: 
+                if emote not in config['users'][channel]['custom']['emotes']['list']: config['users'][channel]['custom']['emotes']['list'].append(emote)
             bot.say(channel, '{} added to emote list'.format(' '.join(emotes)))
         elif action == 'command':
             if message.split(' ')[3].lower().startswith("/w") or message.split(' ')[3].lower().startswith(".w"):
@@ -858,7 +856,7 @@ class WooferBotCommandHandler(Sensitive):
 
     def getEmotes(self, bot, user, channel, message):
         if len(config['users'][channel]['custom']['emotes'].keys()) <= 0: return
-        bot.say(channel, "{}".format(" , ".join(config['users'][channel]['custom']['emotes'].keys())))
+        bot.say(channel, "{}".format(" , ".join(config['users'][channel]['custom']['emotes']['list'])))
 
     def randomButt(self, bot, user, channel, message):  
         if not config['users'][channel]['butt']: return
@@ -871,7 +869,7 @@ class WooferBotCommandHandler(Sensitive):
     def executeDelCustom(self, bot, user, channel, message):
             if user != channel and bot.getUserMode(channel, user).is_regular() and not config['users'][user]['status'] == 'admin': return
             if message.split(' ')[1] == 'emote':
-                del config['users'][channel]['custom']['emotes'][message.split(' ')[2]]
+                config['users'][channel]['custom']['emotes']['list'].remove(message.split(' ')[2])
                 bot.say(channel, '{} has been deleted'.format(message.split(' ')[2]))
             elif message.split(' ')[1] == 'command':
                 del config['users'][channel]['custom']['commands'][message.split(' ')[2]]

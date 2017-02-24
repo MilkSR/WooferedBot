@@ -65,9 +65,15 @@ class WooferConfig(dict):
                 if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
                 if 'custom' not in config['users'][c].keys():
                     config['users'][c]['custom'] = {}
+                if 'count' not in config['users'][c]['custom']['emotes']: config['users'][c]['custom']['emotes']['count'] = 0
+                if 'list' not in config['users'][c]['custom']['emotes']: config['users'][c]['custom']['emotes']['list'] = []
                 for x in ['commands','emotes','phrases']:
                     if x not in config['users'][c]['custom'].keys():
                         config['users'][c]['custom'][x] = {}
+                for k in config['users'][c]['custom']['emotes'].keys():
+                    if k != 'count' and k != 'list':
+                        config['users'][c]['custom']['emotes']['list'].append(k)
+                        del config['users'][c]['custom']['emotes'][k]
                 if 'trigger' not in config['users'][c].keys(): config['users'][c]['trigger'] = '+'
                 if 'mods' not in config['users'][c].keys(): config['users'][c]['mods'] = []
                 if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
