@@ -45,12 +45,6 @@ TP_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?twitchpoll\.com/poll/(\S+)"""
 TV_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?twitch\.tv/(?:[A-Za-z0-9_]+)?/(\S+)/(\S+)""", re.IGNORECASE)
 CLIP_LINK = re.compile(r"""\b(?:https?://)?(?:www\.)?clips\.twitch\.tv/(\S+)/(\S+)""", re.IGNORECASE)
 
-#-----------------TODO-----------------
-#A WORKING COMMAND/MESSAGE COOLDOWN
-#Make a good race command
-#Possible song requests
-#--------------------------------------
-
 class WooferBotCommandHandler(Sensitive):
 
     def __init__(self):
@@ -502,8 +496,9 @@ class WooferBotCommandHandler(Sensitive):
             if category == "y":
                 run = data[0]
                 category = run['category']['data']['name']
-            game = data[0]['game']['data']['names']['international']
+            game = data[0]['game']['data']['names']['international'].encode('UTF-8')
             pbTime = run['run']['times']['primary_t']
+            rank = str(run['place'])+("th" if 4<=run['place']%100<=20 else {1:"st",2:"nd",3:"rd"}.get(run['place']%10, "th"))
             page = run['run']['weblink']
             if '.' in str(pbTime):
                 x = float(pbTime)
@@ -516,7 +511,7 @@ class WooferBotCommandHandler(Sensitive):
             if pbTime == 0 and float(x[0]) == 0:
                 bot.say(channel, "The specified category doesn't exist")
             elif pbTime != 0 and float(x[0]) == 0:
-                bot.say(channel, "{}'s personal record in {}, {} is {} | Run Page: {}".format(runner, game, category, timeString, page))
+                bot.say(channel, "{} place | {}'s personal record in {}, {} is {} | Run Page: {}".format(rank, runner, game, category, timeString, page))
             elif float(x[0]) != 0:
                 pbDec = str(x[0])
                 bot.say(channel, "{}'s personal record in {}, {} is {}{} | Run Page: {}".format(runner, game, category, timeString, pbDec[1:], page))
