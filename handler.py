@@ -1061,7 +1061,7 @@ class WooferBotCommandHandler(Sensitive):
         if not user == channel and not config['users'][user]['status'] == 'admin': return
         admins = []
         for user in config['users'].keys():
-            if config['users'][user]['status'] == 'admin': admins.append(user.title())
+            if config['users'][user]['status'] == 'admin': admins.append(user)
         bot.say(channel,"{}".format(', '.join(admins)))
 
     def getIgnored(self, bot, user, channel, message):
