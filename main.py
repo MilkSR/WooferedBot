@@ -48,6 +48,11 @@ def keyboard_handler():
                 elif command.lower() == "reload":
                     rebuild(handler)
                     rebuild(api)
+                
+                elif command.lower() == "load":
+                    loadChannel = raw_input("Which channel's config should I load?:")
+                    config.load(loadChannel)
+                    
         except Exception,e:
             print e
 

@@ -115,12 +115,12 @@ def getTwitchpoll(pid):
     return response.json()
     
 def getTwitchVod(vc, vid):
-    url = "https://api.twitch.tv/kraken/videos/{}{}".format(vc, vid)
+    url = "https://api.twitch.tv/kraken/videos/{}".format(vid)
     response = requests.get(url, headers={'Client-ID': config['twitchCID']})
     return response.json()
 
-def getTwitchClip(c,clip):
-    url = "https://clips.twitch.tv/api/v1/clips/{}/{}".format(c, clip)
+def getTwitchClip(clip):
+    url = "https://clips.twitch.tv/api/v1/clips/{}".format(clip)
     response = requests.get(url, headers={'Client-ID': config['twitchCID']})
     return response.json()
 

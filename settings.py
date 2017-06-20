@@ -1,3 +1,4 @@
+import os
 import json
 import urllib
 
@@ -16,38 +17,54 @@ class WooferConfig(dict):
     cfg_file = 'wooferbot.config'
     cfg_backup = 'wooferbot.backup'
 
-    def load(self):
+    def loadAll(self):
         try:
-            with open(WooferConfig.cfg_file) as f:
+            with open(WooferConfig.cfg_file, "r+") as f:
                 self.update(byteify(json.load(f)))
         except Exception as err:
             # Log the damn error.
             print "Problem loading config:", repr(err)
-
-            # try to save original file under different filename
-            import os.path, os, time
-            try:
-                if os.path.isfile(WooferConfig.cfg_file):
-                    parts = WooferConfig.cfg_file.split('.')
-                    backup_name = '{0}_{2}.{1}'.format(''.join(parts[0:-1]), parts[-1], time.strftime("%Y%m%d-%H%M%S"))
-                    os.rename(WooferConfig.cfg_file, backup_name)
-            except:
-                pass
-            config.defaults()
-
+        self['users'] = {}
+        for cfgFile in os.listdir("config"):
+            if cfgFile.split('.')[1] == "cfg":
+                with open("config/{}".format(cfgFile), "r+") as uCfg:
+                    self['users'][cfgFile.split('.')[0]] = byteify(json.load(uCfg))
         config.sanitize()
+        
+    def load(self, channel):
+        del self['users'][channel]
+        with open("config/{}.cfg".format(channel), "r") as f:
+            self['users'][channel] = byteify(json.load(f))
 
-    def save(self, **FnS):
+    def save(self, channel, **FnS):
         if 'san' not in FnS.keys(): config.sanitize()
         if 'file' in FnS.keys(): 
             file = FnS['file']
         else:
             file = WooferConfig.cfg_file
-        coppeh = self.copy()
-        del coppeh['dogsc']
-        del coppeh['ltcu']
+        if file == WooferConfig.cfg_file:
+            if  channel != "all channels":
+                file = "config/{}.cfg".format(channel)
+        elif file == WooferConfig.cfg_backup:
+            if channel != "all channels":
+                file = "config/{}.bkup".format(channel)
+        if file != WooferConfig.cfg_backup and file != WooferConfig.cfg_file:
+            coppeh = self['users'][channel]
+        else:
+            coppeh = self.copy()
+        if 'dogsc' in coppeh.keys(): del coppeh['dogsc']
+        if 'ltcu' in coppeh.keys(): del coppeh['ltcu']
+        if 'users' in coppeh.keys(): del coppeh['users']
         with open(file, 'w') as f:
             json.dump(coppeh, f, indent=4, sort_keys=True)
+        if channel == "all channels" and file == WooferConfig.cfg_file:
+                for user in self['users']:
+                    with open("config/{}.cfg".format(user), "w+") as uCfg:
+                        json.dump(self['users'][user], uCfg, indent=4, sort_keys=True)
+        elif channel == "all channels" and file == WooferConfig.cfg_backup:
+            for user in self['users']:
+                with open("config/{}.bkup".format(user), "w+") as uCfg:
+                    json.dump(self['users'][user], uCfg, indent=4, sort_keys=True) 
 
     def sanitize(self):
         config['channels'].sort()
@@ -65,14 +82,10 @@ class WooferConfig(dict):
                 if 'ignore' not in config['users'][c].keys(): config['users'][c]['ignore'] = []
                 if 'custom' not in config['users'][c].keys():
                     config['users'][c]['custom'] = {}
-                if 'list' not in config['users'][c]['custom']['emotes']: config['users'][c]['custom']['emotes']['list'] = []
-                for x in ['commands','emotes','phrases']:
+                for x in ['commands','emotes','phrases','modCommands']:
                     if x not in config['users'][c]['custom'].keys():
                         config['users'][c]['custom'][x] = {}
-                for k in config['users'][c]['custom']['emotes'].keys():
-                    if k != 'count' and k != 'list':
-                        config['users'][c]['custom']['emotes']['list'].append(k)
-                        del config['users'][c]['custom']['emotes'][k]
+                if 'list' not in config['users'][c]['custom']['emotes']: config['users'][c]['custom']['emotes']['list'] = []
                 if 'trigger' not in config['users'][c].keys(): config['users'][c]['trigger'] = '+'
                 if 'mods' not in config['users'][c].keys(): config['users'][c]['mods'] = []
                 if 'highlights' not in config['users'][c].keys(): config['users'][c]['highlights'] = []
@@ -86,6 +99,9 @@ class WooferConfig(dict):
                 if 'bannedwords' not in config['users'][c].keys(): config['users'][c]['bannedwords'] = {}
                 if 'count' in config['users'][c]['quotes'].keys(): del config['users'][c]['quotes']['count']
                 if 'mods' in config['users'][c].keys(): del config['users'][c]['mods']
+                if 'emoteposting' not in config['users'][c].keys():
+                    if config['users'][c]['dogs']: config['users'][c]['emoteposting'] = True
+                    else: config['users'][c]['emoteposting'] = False
             if config['users'][c]['status'] == "chatter" and (len(config['users'][c]['pcommands'].keys()) == 0 and config['users'][c]['nick'] == None): 
                 del config['users'][c]
 
@@ -104,7 +120,7 @@ class WooferConfig(dict):
                     ltcu['commands'][c][co] = 0
         
         #save backup of config
-        config.save(san = 0, file = WooferConfig.cfg_backup)
+        config.save("all channels", san = 0, file = WooferConfig.cfg_backup)
 
     def checkConfig(channel, mod):
         if config['users'][channel][mod]:

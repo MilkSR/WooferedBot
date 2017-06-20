@@ -6,3 +6,7 @@ wooferbot.config.old
 wooferbot.backup
 *.rar
 run.bat
+*.cfg
+*.bkup
+ideas.gay
+cfgConvert.py
