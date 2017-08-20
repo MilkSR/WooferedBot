@@ -122,6 +122,18 @@ class WooferConfig(dict):
         #save backup of config
         config.save("all channels", san = 0, file = WooferConfig.cfg_backup)
 
+    def logError(self, channel, message, time, error, lineno):
+        with open("error_log.log", "r+") as el: 
+            eLog = byteify(json.load(el))
+            el.close()
+        with open("error_log.log", "w+") as el:
+            eLog[time] = {}
+            eLog[time]['channel'] = channel
+            eLog[time]['message'] = message
+            eLog[time]['error_message'] = error
+            eLog[time]['lineno'] = lineno
+            json.dump(eLog, el, indent=1, sort_keys=True) 
+
     def checkConfig(channel, mod):
         if config['users'][channel][mod]:
             return true

@@ -124,8 +124,7 @@ class WooferBotFactory(protocol.ClientFactory):
                 config['users'][channel]['added by'] = adder
                 config['users'][channel]['time added'] = time.strftime('%c')
             config['channels'].append(channel)
-            config.sanitize() # ensures config is valid
-            config.save()
+            config.save(channel)
         else:
             print 'channel was already in config'
 

@@ -69,9 +69,13 @@ class WooferBotCommandHandler(Sensitive):
                 for (prefix, handler, dispatch) in self.commands:
                     if message.lower().startswith(prefix.format(config['users'][channel]['trigger'])):
                         if dispatch: # handle in separate thread
-                            args = (handler, bot, user, channel, message)
-                            self.commandQueue.append(args)
-                            self.semaphore.release()
+                            try:
+                                args = (handler, bot, user, channel, message)
+                                self.commandQueue.append(args)
+                                self.semaphore.release()
+                            except Exception,e:
+                                print 'Error while handling command: ' + e.message
+                                config.logError(channel, message, str(datetime.datetime.now()), e, sys.exc_traceback.tb_lineno)
                         else:
                             try:
                                 getattr(self, handler)(bot, user, channel, message)
@@ -84,6 +88,7 @@ class WooferBotCommandHandler(Sensitive):
     def updateDogs(self, bot, channel, message):
         if not config['users'][channel]['emoteposting']: return
         global lastMessage
+        messageLimit = 74
         dim = 0
         ri = 0
         dogList = []
@@ -98,10 +103,10 @@ class WooferBotCommandHandler(Sensitive):
             config['dogsc']['dogCount'][channel] += 1
         elif dim == 1: 
             config['dogsc']['dogCount'][channel] += 5
-        if config['dogsc']['dogCount'][channel] >= 95: 
-            config['dogsc']['dogCount'][channel] = 94
+        if config['dogsc']['dogCount'][channel] >= (messageLimit + 1): 
+            config['dogsc']['dogCount'][channel] = (messageLimit - 1)
         if config['dogsc']['dogCount'][channel] >= 40:
-            ri = random.randint(config['dogsc']['dogCount'][channel], 95)
+            ri = random.randint(config['dogsc']['dogCount'][channel], messageLimit)
             if config['dogsc']['dogCount'][channel] >= ri:
                 bot.say(channel, random.choice(dogList))
                 config['dogsc']['dogCount'][channel] -= ri
@@ -127,7 +132,7 @@ class WooferBotCommandHandler(Sensitive):
                 bot.say(channel, config['users'][channel]['custom']['modCommands'][mcommand])
         for phrase in config['users'][channel]['custom']['phrases'].keys():
             if phrase.lower() in message.lower():
-                bot.say(channel,"{}".format(config['users'][channel]['custom']['phrases'][phrase]))
+                bot.say(channel,str(config['users'][channel]['custom']['phrases'][phrase]).format(user=user))
         return
 
     def updateBans(self, bot, user, channel, message):
@@ -738,7 +743,7 @@ class WooferBotCommandHandler(Sensitive):
             ray = random.choice(rlist)
             slist.append(ray)
             rlist.remove(ray)
-        if (user != "flashyniqua" and user != "powderedmilk_") or "BCWarrior" not in message:
+        if (user != "loveflashy" and user != "powderedmilk_") or "BCWarrior" not in message:
             d1 = random.choice(slist)
             d2 = random.choice(slist)
             d3 = random.choice(slist)
@@ -1178,11 +1183,11 @@ class WooferBotCommandHandler(Sensitive):
         ('{}multi','executeMultitwitch', False),
         ('{}about', 'executeAbout', False),
         ('{}nick', 'executeNick',False),
-        ('{}ignore','executeIgnore',True),
-        ('{}unignore','executeUnignore',True),
+        ('{}ignore','executeIgnore',False),
+        ('{}unignore','executeUnignore',False),
         ('{}race','executeRace',True),
         ('{}new','executeCustom',False),
-        ('{}del','executeDelCustom',True),
+        ('{}del','executeDelCustom',False),
         ('{}reload','executeReload',False),
         ('+savecfg','saveConfig',False),
         ('{}commands','executeCommands',False),
