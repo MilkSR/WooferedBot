@@ -1,6 +1,7 @@
 # coding=utf-8
 import time
 import re
+import os
 import json
 import random
 import datetime
@@ -88,7 +89,7 @@ class WooferBotCommandHandler(Sensitive):
     def updateDogs(self, bot, channel, message):
         if not config['users'][channel]['emoteposting']: return
         global lastMessage
-        messageLimit = 74
+        messageLimit = 94
         dim = 0
         ri = 0
         dogList = []
@@ -105,7 +106,7 @@ class WooferBotCommandHandler(Sensitive):
             config['dogsc']['dogCount'][channel] += 5
         if config['dogsc']['dogCount'][channel] >= (messageLimit + 1): 
             config['dogsc']['dogCount'][channel] = (messageLimit - 1)
-        if config['dogsc']['dogCount'][channel] >= 40:
+        if config['dogsc']['dogCount'][channel] >= 60:
             ri = random.randint(config['dogsc']['dogCount'][channel], messageLimit)
             if config['dogsc']['dogCount'][channel] >= ri:
                 bot.say(channel, random.choice(dogList))
@@ -353,7 +354,9 @@ class WooferBotCommandHandler(Sensitive):
                 bot.leave(channel, 'requested by {}'.format(user))
                 del config['users'][channel]
                 config['channels'].remove(channel)
-                config.save(channel)
+                os.remove("config/" + channel + ".cfg")
+                os.remove("config/" + channel + ".bkup")
+                config.save("all channels")
         except Exception,e:
             print e
             print sys.exc_traceback.tb_lineno
@@ -709,7 +712,7 @@ class WooferBotCommandHandler(Sensitive):
     def executeSet(self, bot, user, channel, message):
         if user == channel or config['users'][user]['status'] == 'admin':
             if message.split(' ')[1] == 'trigger': config['users'][channel]['trigger'] = message.split(' ')[2].strip()
-            if message.split(' ')[2] == 'admin' and user == 'powderedmilk_':
+            if message.split(' ')[2] == 'admin' and user == 'milk_':
                 config['users'][message.split(' ')[1]]['status'] = 'admin'
                 bot.say(channel,"{} set as bot admin".format(message.split(' ')[1]))
             if message.split(' ')[1] == 'cooldown': config['users'][channel]['cooldowns'][message.split(' ')[2]] = message.split(' ')[3]
@@ -743,7 +746,7 @@ class WooferBotCommandHandler(Sensitive):
             ray = random.choice(rlist)
             slist.append(ray)
             rlist.remove(ray)
-        if (user != "loveflashy" and user != "powderedmilk_") or "BCWarrior" not in message:
+        if (user != "loveflashy" and user != "milk_") or "!" not in message:
             d1 = random.choice(slist)
             d2 = random.choice(slist)
             d3 = random.choice(slist)
@@ -759,7 +762,7 @@ class WooferBotCommandHandler(Sensitive):
         
     def slotsJackpot(self, bot, user, channel, sTime):
         if not bot.getUserMode(channel, "wooferedmilk").is_regular():
-            bot.say(channel, "Jackpot!")
+            bot.say(channel, "Jackpot! [{}]".format(user))
 
     def executeEightBall(self, bot, user, channel, message):
         if not config['users'][channel]['novelty']: return
